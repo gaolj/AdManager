@@ -1,0 +1,65 @@
+syntax = "proto3";
+// version 1.25
+
+option java_package = "com.oddmu.advertcenter.model.proto";
+option java_outer_classname = "CommunicationMsgProtos";
+
+
+message Result {
+	repeated Ad ads = 1;
+}
+
+// 中心接口
+// 获取广告播放策略: 		AdPlayPolicy getAdPlayPolicy(int32 barId)
+// 获取广告列表: 			list<Ad> getAdList()
+// 获取单个广告: 			Ad getAd(int32 adId)
+
+// 网吧接口
+// 广告播放策略更新通知		bool adPlayPolicyChanged()
+// 广告列表更新通知			bool adListChanged()
+
+message Ad {
+	int32 id = 1;			// 广告ID
+	string name = 2;		// 广告名称（九阴真经）
+	string fileName = 3;	// 广告文件名（九阴真经.wmv）
+	string advertiser = 4;	// 广告商名称
+	int32 type = 5;			// 类型：视频-1，本地Web页面-2，超链接-3，图片-4，图标-5
+	string url = 6;			// 超链接广告的url
+	bytes image = 7;		// 图片，图标的二进制数据
+	int32 width = 8;		// 广告画面最佳宽度
+	int32 height = 9;		// 广告画面最佳高度
+	string format = 10;		// 格式: swf, wmv
+	int32 size = 11;		// 文件字节数
+	string md5 = 12;		// 文件校验md5
+	int32 duration = 13;	// 播放时间长度（秒）
+	repeated string download = 14;		// 下载路径
+	
+	int32 minAge = 15;		// 适合最小年龄
+	int32 maxAge = 16;		// 适合最大年龄
+	int32 sex = 17;			// 适合性别：男女-0，男-1，女-2
+	repeated string visitStatCode = 18;	// 第三方访问统计代码
+	repeated int32 pausePopAdIds = 19;	// 视频暂停Pop广告Id
+	repeated int32 unlockPopAdIds = 20;	// 解锁后Pop广告Id
+}
+
+message AdPlayPolicy {
+	int32 id = 1;				// 策略id
+	string version = 2;			// 策略版本
+	string dateTime = 3;		// 策略发布日期
+	repeated AdPlay adPlays = 4;// 广告播放列表
+	
+	message AdPlay {
+		int32 location = 1;		// 广告位：锁屏-1，pop-2，退弹-3
+		int32 mode = 2;			// 播放模式：按顺序轮播-1，随机播放-2
+		bool needSync = 3;		// 是否需要同步播放
+		repeated PlayTime playTimes = 4;// 播放时间列表
+		repeated int32 adIds = 5;		// 广告id列表
+		
+		message PlayTime {
+			string bgnTime = 1;			// 开始播放时间	2017-03-11 12:00:00
+			string endTime = 2;			// 结束播放时间 2017-03-11 24:00:00
+		}
+	}	
+}
+
+// protoc.exe --cpp_out=./ad  AdPlayPolicy.proto
