@@ -40,7 +40,7 @@ void TcpClient::connect(const boost::asio::ip::tcp::endpoint& endpoint)
 		if (!ec)
 		{
 			_reconnectInterval = 1;
-			_promiseConn.set_value(true);
+			_promiseConn.set_value(true);	// ??? boost::throw_exception<boost::promise_already_satisfied>
 			_session->start();
 		}
 		else

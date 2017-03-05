@@ -117,7 +117,7 @@ void AdManager::requestAdList()
 		_timerAdList.expires_from_now(boost::posix_time::seconds(timeout));
 		_timerAdList.async_wait(boost::bind(&AdManager::requestAdList, this));
 		if (msgRsp.returncode() != 0)
-			LOG_DEBUG(_logger) << "请求广告列表失败:" << msgRsp.returncode() << ", " << msgRsp.release_returnmsg();
+			LOG_DEBUG(_logger) << "请求广告列表失败:" << msgRsp.returncode() << ", " << msgRsp.returnmsg();
 		else
 			LOG_DEBUG(_logger) << "请求广告列表失败, content解析失败";
 	}
