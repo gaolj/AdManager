@@ -31,7 +31,7 @@ namespace
 	Ad& UTF8ToGB2312(Ad& ad)
 	{
 		ad.set_name(boost::locale::conv::from_utf(ad.name(), "gb2312"));
-//		ad.set_filename(boost::locale::conv::from_utf(ad.filename(), "gb2312"));
+		ad.set_filename(boost::locale::conv::from_utf(ad.filename(), "gb2312"));
 		ad.set_advertiser(boost::locale::conv::from_utf(ad.advertiser(), "gb2312"));
 
 		::google::protobuf::RepeatedPtrField< ::std::string>* downs = ad.mutable_download();
