@@ -13,10 +13,21 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Proto">
+      <UniqueIdentifier>{9ef6d54b-1338-439f-b388-f6fbb55b8bd4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
-    <None Include="md5.hh" />
+    <None Include="md5.hh">
+      <Filter>头文件</Filter>
+    </None>
+    <None Include="AdPlayPolicy.proto">
+      <Filter>Proto</Filter>
+    </None>
+    <None Include="protoc.exe">
+      <Filter>Proto</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AdManager.cpp">
@@ -47,10 +58,10 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="ad\AdPlayPolicy.pb.cc">
-      <Filter>源文件</Filter>
+      <Filter>Proto</Filter>
     </ClCompile>
     <ClCompile Include="ad\Message.pb.cc">
-      <Filter>源文件</Filter>
+      <Filter>Proto</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -79,10 +90,10 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="ad\AdPlayPolicy.pb.h">
-      <Filter>头文件</Filter>
+      <Filter>Proto</Filter>
     </ClInclude>
     <ClInclude Include="ad\Message.pb.h">
-      <Filter>头文件</Filter>
+      <Filter>Proto</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
