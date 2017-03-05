@@ -30,3 +30,5 @@ $tf*/
 *.opensdf
 *.sdf
 ipch
+*.db
+*.opendb
