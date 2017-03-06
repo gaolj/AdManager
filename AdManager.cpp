@@ -298,8 +298,18 @@ void AdManager::downloadAds()
 	std::set<google::protobuf::int32> idSet;
 	BOOST_FOREACH(auto& adplay, _policy.adplays())	// for (auto& adplay : _policy.adplays())
 		BOOST_FOREACH(auto id, adplay.adids())		// for (auto id : adplay.adids())
-			if (_mapAd[id].download_size() != 0)	// 需要下载
-				idSet.insert(id);
+		if (_mapAd[id].download_size() != 0)	// 需要下载
+			idSet.insert(id);
+	//for (int i = 0; i < _policy.adplays_size(); i++)
+	//{
+	//	auto& adplay = _policy.adplays(i);
+	//	for (int j = 0; j < adplay.adids_size(); j++)
+	//	{
+	//		int id = adplay.adids(j);
+	//		if (_mapAd[id].download_size() != 0)	// 需要下载
+	//			idSet.insert(id);
+	//	}
+	//}
 
 	// 删除失效的内存中的广告文件
 	for (auto it = _mapImage.begin(); it != _mapImage.end();)
@@ -365,6 +375,11 @@ void AdManager::bgnBusiness()
 Ad AdManager::getAd(int adId)
 {
 	return _mapAd[adId];
+}
+
+std::string AdManager::getAdFile(int adId)
+{
+	return _mapImage[adId];
 }
 
 std::unordered_map<uint32_t, Ad> AdManager::getAdList()
