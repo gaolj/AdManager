@@ -16,36 +16,25 @@ using boost::call_once;
 
 #pragma warning (disable: 4003)
 
-namespace
+void AdManager::gb2312ToUTF8(Message& msg)
 {
-	std::string get_filename(const boost::network::uri::uri &url) {
-		std::string path = boost::network::uri::path(url);
-		std::size_t index = path.find_last_of('/');
-		std::string filename = path.substr(index + 1);
-		return filename.empty() ? "index.html" : filename;
-	}
+	msg.set_returnmsg(boost::locale::conv::to_utf<char>(msg.returnmsg(), "gb2312"));
+}
+void AdManager::utf8ToGB2312(Message& msg)
+{
+	msg.set_returnmsg(boost::locale::conv::from_utf(msg.returnmsg(), "gb2312"));
+}
+Ad& AdManager::utf8ToGB2312(Ad& ad)
+{
+	ad.set_name(boost::locale::conv::from_utf(ad.name(), "gb2312"));
+	ad.set_filename(boost::locale::conv::from_utf(ad.filename(), "gb2312"));
+	ad.set_advertiser(boost::locale::conv::from_utf(ad.advertiser(), "gb2312"));
 
-	void GB2312ToUTF8(Message& msg)
-	{
-		msg.set_returnmsg(boost::locale::conv::to_utf<char>(msg.returnmsg(), "gb2312"));
-	}
-	void UTF8ToGB2312(Message& msg)
-	{
-		msg.set_returnmsg(boost::locale::conv::from_utf(msg.returnmsg(), "gb2312"));
-	}
-	Ad& UTF8ToGB2312(Ad& ad)
-	{
-		ad.set_name(boost::locale::conv::from_utf(ad.name(), "gb2312"));
-		ad.set_filename(boost::locale::conv::from_utf(ad.filename(), "gb2312"));
-		ad.set_advertiser(boost::locale::conv::from_utf(ad.advertiser(), "gb2312"));
+	::google::protobuf::RepeatedPtrField< ::std::string>* downs = ad.mutable_download();
+	for (auto it = downs->begin(); it != downs->end(); ++it)
+		*it = boost::locale::conv::from_utf(*it, "gb2312");
 
-		::google::protobuf::RepeatedPtrField< ::std::string>* downs = ad.mutable_download();
-		for (auto it = downs->begin(); it != downs->end(); ++it)
-			*it = boost::locale::conv::from_utf(*it, "gb2312");
-
-		return ad;
-	}
-
+	return ad;
 }
 
 AdManager& AdManager::getInstance()
@@ -73,7 +62,7 @@ bool AdManager::requestAd(int adId)
 
 	auto fut = _tcpClient->session()->request(msgReq);
 	auto msgRsp = fut.get();
-	UTF8ToGB2312(msgRsp);
+	utf8ToGB2312(msgRsp);
 
 	if (msgRsp.returncode() != 0)
 	{
@@ -85,7 +74,7 @@ bool AdManager::requestAd(int adId)
 	if (ad.ParseFromString(msgRsp.content()) == true)
 	{
 		LOG_DEBUG(_logger) << "请求广告信息成功";
-		UTF8ToGB2312(ad);
+		utf8ToGB2312(ad);
 		_mapAd.insert(std::make_pair(ad.id(), ad));
 		return true;
 	}
@@ -103,7 +92,7 @@ void AdManager::requestAdList()
 
 	auto fut = _tcpClient->session()->request(msgReq);
 	auto msgRsp = fut.get();
-	UTF8ToGB2312(msgRsp);
+	utf8ToGB2312(msgRsp);
 
 	Result ads;
 	if (msgRsp.returncode() == 0 && ads.ParseFromString(msgRsp.content()) == true)
@@ -113,7 +102,7 @@ void AdManager::requestAdList()
 		for (int i = 0; i < ads.ads_size(); i++)
 		{
 			auto ad = *ads.mutable_ads(i);
-			UTF8ToGB2312(ad);
+			utf8ToGB2312(ad);
 			_mapAd.insert(std::make_pair(ad.id(), ad));
 		}
 
@@ -148,7 +137,7 @@ void AdManager::requestAdPlayPolicy()
 
 	auto fut = _tcpClient->session()->request(msgReq);
 	auto msgRsp = fut.get();
-	UTF8ToGB2312(msgRsp);
+	utf8ToGB2312(msgRsp);
 	if (msgRsp.returncode() == 0 && _policy.ParseFromString(msgRsp.content()) == true)
 	{
 		LOG_DEBUG(_logger) << "请求广告策略成功";
@@ -206,7 +195,7 @@ void AdManager::handleRequest(std::weak_ptr<TcpSession> session, Message msg)
 			msg.set_content(_mapImage[id]);
 	}
 
-	GB2312ToUTF8(msg);
+	gb2312ToUTF8(msg);
 	pSession->writeMsg(msg);
 }
 
@@ -268,7 +257,7 @@ void AdManager::downloadAd(uint32_t id)
 
 		auto fut = _tcpClient->session()->request(msgReq);
 		auto msgRsp = fut.get();
-		UTF8ToGB2312(msgRsp);
+		utf8ToGB2312(msgRsp);
 
 		if (msgRsp.returncode() != 0)
 		{
@@ -370,26 +359,6 @@ void AdManager::bgnBusiness()
 		requestAdPlayPolicy();
 	});
 
-}
-
-Ad AdManager::getAd(int adId)
-{
-	return _mapAd[adId];
-}
-
-std::string AdManager::getAdFile(int adId)
-{
-	return _mapImage[adId];
-}
-
-std::unordered_map<uint32_t, Ad> AdManager::getAdList()
-{
-	return _mapAd;
-}
-
-AdPlayPolicy AdManager::getAdPlayPolicy()
-{
-	return _policy;
 }
 
 AdManager::AdManager() :
