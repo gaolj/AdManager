@@ -2,7 +2,6 @@
 #include "mstcpip.h"			// struct tcp_keepalive
 #include <boost/asio.hpp>
 #include <boost/foreach.hpp>
-#include "TcpSessionPool.h"
 
 using std::string;
 using boost::asio::ip::tcp;

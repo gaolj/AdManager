@@ -1,8 +1,9 @@
 #pragma once
 #include <unordered_map>
 #include <boost/thread/thread.hpp>
-#include <boost/asio.hpp>
-#include <boost/network/protocol/http.hpp>
+#include <boost/asio/io_service.hpp>
+#include <boost/asio/deadline_timer.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
 #include "Message.pb.h"
 #include "AdPlayPolicy.pb.h"
@@ -53,7 +54,6 @@ private:
 
 	std::shared_ptr<TcpClient> _tcpClient;
 	std::shared_ptr<TcpServer> _tcpServer;
-	boost::network::http::client _httpClient;
 
 	boost::asio::deadline_timer _timerPolicy;
 	boost::asio::deadline_timer _timerAdList;

@@ -6,8 +6,13 @@
 #include <boost/locale.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
+#include <boost/thread/once.hpp>
+#include <boost/network/protocol/http.hpp>
 #include <fstream>
 #include "md5.hh"
+
+using boost::once_flag;
+using boost::call_once;
 
 #pragma warning (disable: 4003)
 
@@ -45,8 +50,15 @@ namespace
 
 AdManager& AdManager::getInstance()
 {
-	static AdManager instance;
-		return instance;
+	static once_flag instanceFlag;
+	static AdManager* pInstance;
+
+	call_once(instanceFlag, []()
+	{
+		static AdManager instance;
+		pInstance = &instance;
+	});
+	return *pInstance;
 }
 
 bool AdManager::requestAd(int adId)
@@ -217,9 +229,10 @@ void AdManager::downloadAd(uint32_t id)
 		// 从中心下载
 		BOOST_FOREACH(auto url, ad.download())	// for (auto url : ad.download())
 		{
+			boost::network::http::client httpClient;
 			boost::network::http::client::request request(url);
 			request << boost::network::header("Connection", "close");
-			boost::network::http::client::response response = _httpClient.get(request);
+			boost::network::http::client::response response = httpClient.get(request);
 			if (response.status() != 200)
 			{
 				LOG_DEBUG(_logger) << "下载广告文件失败:" << response.status();
@@ -240,9 +253,8 @@ void AdManager::downloadAd(uint32_t id)
 			_mapImage.insert(std::make_pair(id, body));
 			LOG_DEBUG(_logger) << "下载广告文件(" << ad.filename() << ")成功";
 
-			//ad.set_filename(boost::locale::conv::from_utf(uri::decoded(get_filename(request.uri())), "gb2312"));
-			//std::ofstream ofs(ad.filename(), std::ofstream::binary);
-			//ofs << body << std::endl;
+			std::ofstream ofs(ad.filename(), std::ofstream::binary);
+			ofs << body << std::endl;
 			break;
 		}
 #endif
@@ -377,7 +389,6 @@ AdManager::AdManager() :
 	_threadNet = boost::thread([this]() {_iosNet.run(); });
 	_threadBiz = boost::thread([this]() {_iosBiz.run(); });
 }
-
 
 AdManager::~AdManager()
 {
