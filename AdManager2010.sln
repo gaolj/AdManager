@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AdManager", "AdManager.vcxproj", "{0C859581-5BF0-42A7-B1E7-912E16E35352}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AdManager", "AdManager2010.vcxproj", "{0C859581-5BF0-42A7-B1E7-912E16E35352}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
