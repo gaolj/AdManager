@@ -59,12 +59,13 @@ void TcpServer::doAccept()
 
 void TcpServer::startSession(std::shared_ptr<TcpSession> session)
 {
-	unique_lock<mutex> lck(_mutex);
 	session->_afterNetError = [this, session]()
 	{
 		unique_lock<mutex> lck(_mutex);
 		_sessionPool.erase(session);
 	};
+
+	unique_lock<mutex> lck(_mutex);
 	_sessionPool.insert(session);
 	session->start();
 }

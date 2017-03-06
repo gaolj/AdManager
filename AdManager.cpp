@@ -64,14 +64,8 @@ bool AdManager::requestAd(int adId)
 	auto msgRsp = fut.get();
 	utf8ToGB2312(msgRsp);
 
-	if (msgRsp.returncode() != 0)
-	{
-		LOG_DEBUG(_logger) << "请求广告信息失败";
-		return false;
-	}
-
 	Ad ad;
-	if (ad.ParseFromString(msgRsp.content()) == true)
+	if (msgRsp.returncode() == 0 && ad.ParseFromString(msgRsp.content()) == true)
 	{
 		LOG_DEBUG(_logger) << "请求广告信息成功";
 		utf8ToGB2312(ad);
@@ -80,7 +74,10 @@ bool AdManager::requestAd(int adId)
 	}
 	else
 	{
-		LOG_DEBUG(_logger) << "请求广告信息, content解析失败";
+		if (msgRsp.returncode() != 0)
+			LOG_DEBUG(_logger) << "请求广告信息失败:" << msgRsp.returncode() << ", " << msgRsp.returnmsg();
+		else
+			LOG_DEBUG(_logger) << "请求广告信息, content解析失败";
 		return false;
 	}
 }
@@ -218,17 +215,67 @@ void AdManager::downloadAd(uint32_t id)
 		// 从中心下载
 		BOOST_FOREACH(auto url, ad.download())	// for (auto url : ad.download())
 		{
-			boost::network::http::client httpClient;
-			boost::network::http::client::request request(url);
-			request << boost::network::header("Connection", "close");
-			boost::network::http::client::response response = httpClient.get(request);
-			if (response.status() != 200)
+			try
 			{
-				LOG_DEBUG(_logger) << "下载广告文件失败:" << response.status();
-				continue;
+				boost::network::http::client httpClient;
+				boost::network::http::client::request request(url);
+				request << boost::network::header("Connection", "close");
+				boost::network::http::client::response response = httpClient.get(request);
+				if (response.status() != 200)
+				{
+					LOG_DEBUG(_logger) << "下载广告文件失败:" << response.status();
+					continue;
+				}
+
+				std::string body = boost::network::http::body(response);
+				MD5 context;
+				context.update((unsigned char *)body.c_str(), body.length());
+				context.finalize();
+				std::string md5 = context.hex_digest();	// hex_digest有泄漏
+				if (boost::to_upper_copy(ad.md5()) != boost::to_upper_copy(md5))
+				{
+					LOG_DEBUG(_logger) << "下载的广告文件(" << ad.filename() << ")md5校验失败";
+					continue;
+				}
+
+				_mapImage.insert(std::make_pair(id, body));
+				LOG_DEBUG(_logger) << "下载广告文件(" << ad.filename() << ")成功";
+
+				std::ofstream ofs(ad.filename(), std::ofstream::binary);
+				ofs << body << std::endl;
+				break;
+			}
+			catch (const boost::exception& ex)
+			{
+				LOG_ERROR(_logger) << boost::diagnostic_information(ex);
+			}
+			catch (const std::exception& ex)
+			{
+				LOG_ERROR(_logger) << ex.what();
+			}
+		}
+#endif
+	}
+	else
+	{
+		try
+		{
+			// 从网吧服务器下载
+			Message msgReq;
+			msgReq.set_method("getAdFile");
+			msgReq.set_content(&id, 4);
+
+			auto fut = _tcpClient->session()->request(msgReq);
+			auto msgRsp = fut.get();
+			utf8ToGB2312(msgRsp);
+
+			if (msgRsp.returncode() != 0)
+			{
+				LOG_DEBUG(_logger) << "获取广告文件失败:" << msgRsp.returncode() << ", " << msgRsp.returnmsg();
+				return;
 			}
 
-			std::string body = boost::network::http::body(response);
+			std::string body = msgRsp.content();
 			MD5 context;
 			context.update((unsigned char *)body.c_str(), body.length());
 			context.finalize();
@@ -236,48 +283,20 @@ void AdManager::downloadAd(uint32_t id)
 			if (boost::to_upper_copy(ad.md5()) != boost::to_upper_copy(md5))
 			{
 				LOG_DEBUG(_logger) << "下载的广告文件(" << ad.filename() << ")md5校验失败";
-				continue;
+				return;
 			}
 
 			_mapImage.insert(std::make_pair(id, body));
 			LOG_DEBUG(_logger) << "下载广告文件(" << ad.filename() << ")成功";
-
-			std::ofstream ofs(ad.filename(), std::ofstream::binary);
-			ofs << body << std::endl;
-			break;
 		}
-#endif
-	}
-	else
-	{
-		// 从网吧服务器下载
-		Message msgReq;
-		msgReq.set_method("getAdFile");
-		msgReq.set_content(&id, 4);
-
-		auto fut = _tcpClient->session()->request(msgReq);
-		auto msgRsp = fut.get();
-		utf8ToGB2312(msgRsp);
-
-		if (msgRsp.returncode() != 0)
+		catch (const boost::exception& ex)
 		{
-			LOG_DEBUG(_logger) << "获取广告文件失败:" << msgRsp.returncode() << ", " << msgRsp.returnmsg();
-			return;
+			LOG_ERROR(_logger) << boost::diagnostic_information(ex);
 		}
-
-		std::string body = msgRsp.content();
-		MD5 context;
-		context.update((unsigned char *)body.c_str(), body.length());
-		context.finalize();
-		std::string md5 = context.hex_digest();	// hex_digest有泄漏
-		if (boost::to_upper_copy(ad.md5()) != boost::to_upper_copy(md5))
+		catch (const std::exception& ex)
 		{
-			LOG_DEBUG(_logger) << "下载的广告文件(" << ad.filename() << ")md5校验失败";
-			return;
+			LOG_ERROR(_logger) << ex.what();
 		}
-
-		_mapImage.insert(std::make_pair(id, body));
-		LOG_DEBUG(_logger) << "下载广告文件(" << ad.filename() << ")成功";
 	}
 }
 
