@@ -1,8 +1,11 @@
 #include "TcpServer.h"
-#include "TcpSessionPool.h"
 #include "AdManager.h"
+#include "TcpSession.h"
+#include <boost/foreach.hpp>
 
 using boost::asio::ip::tcp;
+using boost::mutex;
+using boost::unique_lock;
 
 TcpServer::TcpServer(boost::asio::io_service& ios, int port):
 	_ios(ios),
@@ -10,7 +13,6 @@ TcpServer::TcpServer(boost::asio::io_service& ios, int port):
 	_logger(keywords::channel = "net")
 {
 }
-
 
 TcpServer::~TcpServer()
 {
@@ -24,6 +26,11 @@ void TcpServer::start()
 void TcpServer::stop()
 {
 	_acceptor.close();
+
+	unique_lock<mutex> lck(_mutex);
+	BOOST_FOREACH(auto session, _sessionPool)					// for (auto session : _sessionPool)
+		session->stop();
+	_sessionPool.clear();
 }
 
 void TcpServer::doAccept()
@@ -41,11 +48,23 @@ void TcpServer::doAccept()
 			session->setRequestHandler(
 				boost::bind(&AdManager::handleRequest, &AdManager::getInstance(), session, _1));
 
-			TcpSessionPool::instance()->start(session);
+			startSession(session);
 		}
 		else
 			LOG_ERROR(_logger) << "async_accept:" << ec.message();
 
 		doAccept();
 	});
+}
+
+void TcpServer::startSession(std::shared_ptr<TcpSession> session)
+{
+	unique_lock<mutex> lck(_mutex);
+	session->_afterNetError = [this, session]()
+	{
+		unique_lock<mutex> lck(_mutex);
+		_sessionPool.erase(session);
+	};
+	_sessionPool.insert(session);
+	session->start();
 }

@@ -48,6 +48,9 @@
     <IntDir>$(Configuration)2015\</IntDir>
     <OutDir>$(SolutionDir)$(Configuration)2015\</OutDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)$(Configuration)2015\</OutDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>
@@ -103,7 +106,6 @@
     <ClCompile Include="TcpClient.cpp" />
     <ClCompile Include="TcpServer.cpp" />
     <ClCompile Include="TcpSession.cpp" />
-    <ClCompile Include="TcpSessionPool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AdManager.h" />
@@ -115,7 +117,6 @@
     <ClInclude Include="TcpClient.h" />
     <ClInclude Include="TcpServer.h" />
     <ClInclude Include="TcpSession.h" />
-    <ClInclude Include="TcpSessionPool.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

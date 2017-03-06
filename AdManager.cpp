@@ -6,47 +6,48 @@
 #include <boost/locale.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
+#include <boost/thread/once.hpp>
+#include <boost/network/protocol/http.hpp>
 #include <fstream>
 #include "md5.hh"
 
+using boost::once_flag;
+using boost::call_once;
+
 #pragma warning (disable: 4003)
 
-namespace
+void AdManager::gb2312ToUTF8(Message& msg)
 {
-	std::string get_filename(const boost::network::uri::uri &url) {
-		std::string path = boost::network::uri::path(url);
-		std::size_t index = path.find_last_of('/');
-		std::string filename = path.substr(index + 1);
-		return filename.empty() ? "index.html" : filename;
-	}
+	msg.set_returnmsg(boost::locale::conv::to_utf<char>(msg.returnmsg(), "gb2312"));
+}
+void AdManager::utf8ToGB2312(Message& msg)
+{
+	msg.set_returnmsg(boost::locale::conv::from_utf(msg.returnmsg(), "gb2312"));
+}
+Ad& AdManager::utf8ToGB2312(Ad& ad)
+{
+	ad.set_name(boost::locale::conv::from_utf(ad.name(), "gb2312"));
+	ad.set_filename(boost::locale::conv::from_utf(ad.filename(), "gb2312"));
+	ad.set_advertiser(boost::locale::conv::from_utf(ad.advertiser(), "gb2312"));
 
-	void GB2312ToUTF8(Message& msg)
-	{
-		msg.set_returnmsg(boost::locale::conv::to_utf<char>(msg.returnmsg(), "gb2312"));
-	}
-	void UTF8ToGB2312(Message& msg)
-	{
-		msg.set_returnmsg(boost::locale::conv::from_utf(msg.returnmsg(), "gb2312"));
-	}
-	Ad& UTF8ToGB2312(Ad& ad)
-	{
-		ad.set_name(boost::locale::conv::from_utf(ad.name(), "gb2312"));
-		ad.set_filename(boost::locale::conv::from_utf(ad.filename(), "gb2312"));
-		ad.set_advertiser(boost::locale::conv::from_utf(ad.advertiser(), "gb2312"));
+	::google::protobuf::RepeatedPtrField< ::std::string>* downs = ad.mutable_download();
+	for (auto it = downs->begin(); it != downs->end(); ++it)
+		*it = boost::locale::conv::from_utf(*it, "gb2312");
 
-		::google::protobuf::RepeatedPtrField< ::std::string>* downs = ad.mutable_download();
-		for (auto it = downs->begin(); it != downs->end(); ++it)
-			*it = boost::locale::conv::from_utf(*it, "gb2312");
-
-		return ad;
-	}
-
+	return ad;
 }
 
 AdManager& AdManager::getInstance()
 {
-	static AdManager instance;
-		return instance;
+	static once_flag instanceFlag;
+	static AdManager* pInstance;
+
+	call_once(instanceFlag, []()
+	{
+		static AdManager instance;
+		pInstance = &instance;
+	});
+	return *pInstance;
 }
 
 bool AdManager::requestAd(int adId)
@@ -61,7 +62,7 @@ bool AdManager::requestAd(int adId)
 
 	auto fut = _tcpClient->session()->request(msgReq);
 	auto msgRsp = fut.get();
-	UTF8ToGB2312(msgRsp);
+	utf8ToGB2312(msgRsp);
 
 	if (msgRsp.returncode() != 0)
 	{
@@ -73,7 +74,7 @@ bool AdManager::requestAd(int adId)
 	if (ad.ParseFromString(msgRsp.content()) == true)
 	{
 		LOG_DEBUG(_logger) << "请求广告信息成功";
-		UTF8ToGB2312(ad);
+		utf8ToGB2312(ad);
 		_mapAd.insert(std::make_pair(ad.id(), ad));
 		return true;
 	}
@@ -91,7 +92,7 @@ void AdManager::requestAdList()
 
 	auto fut = _tcpClient->session()->request(msgReq);
 	auto msgRsp = fut.get();
-	UTF8ToGB2312(msgRsp);
+	utf8ToGB2312(msgRsp);
 
 	Result ads;
 	if (msgRsp.returncode() == 0 && ads.ParseFromString(msgRsp.content()) == true)
@@ -101,7 +102,7 @@ void AdManager::requestAdList()
 		for (int i = 0; i < ads.ads_size(); i++)
 		{
 			auto ad = *ads.mutable_ads(i);
-			UTF8ToGB2312(ad);
+			utf8ToGB2312(ad);
 			_mapAd.insert(std::make_pair(ad.id(), ad));
 		}
 
@@ -136,7 +137,7 @@ void AdManager::requestAdPlayPolicy()
 
 	auto fut = _tcpClient->session()->request(msgReq);
 	auto msgRsp = fut.get();
-	UTF8ToGB2312(msgRsp);
+	utf8ToGB2312(msgRsp);
 	if (msgRsp.returncode() == 0 && _policy.ParseFromString(msgRsp.content()) == true)
 	{
 		LOG_DEBUG(_logger) << "请求广告策略成功";
@@ -194,7 +195,7 @@ void AdManager::handleRequest(std::weak_ptr<TcpSession> session, Message msg)
 			msg.set_content(_mapImage[id]);
 	}
 
-	GB2312ToUTF8(msg);
+	gb2312ToUTF8(msg);
 	pSession->writeMsg(msg);
 }
 
@@ -217,9 +218,10 @@ void AdManager::downloadAd(uint32_t id)
 		// 从中心下载
 		BOOST_FOREACH(auto url, ad.download())	// for (auto url : ad.download())
 		{
+			boost::network::http::client httpClient;
 			boost::network::http::client::request request(url);
 			request << boost::network::header("Connection", "close");
-			boost::network::http::client::response response = _httpClient.get(request);
+			boost::network::http::client::response response = httpClient.get(request);
 			if (response.status() != 200)
 			{
 				LOG_DEBUG(_logger) << "下载广告文件失败:" << response.status();
@@ -240,9 +242,8 @@ void AdManager::downloadAd(uint32_t id)
 			_mapImage.insert(std::make_pair(id, body));
 			LOG_DEBUG(_logger) << "下载广告文件(" << ad.filename() << ")成功";
 
-			//ad.set_filename(boost::locale::conv::from_utf(uri::decoded(get_filename(request.uri())), "gb2312"));
-			//std::ofstream ofs(ad.filename(), std::ofstream::binary);
-			//ofs << body << std::endl;
+			std::ofstream ofs(ad.filename(), std::ofstream::binary);
+			ofs << body << std::endl;
 			break;
 		}
 #endif
@@ -256,7 +257,7 @@ void AdManager::downloadAd(uint32_t id)
 
 		auto fut = _tcpClient->session()->request(msgReq);
 		auto msgRsp = fut.get();
-		UTF8ToGB2312(msgRsp);
+		utf8ToGB2312(msgRsp);
 
 		if (msgRsp.returncode() != 0)
 		{
@@ -286,8 +287,18 @@ void AdManager::downloadAds()
 	std::set<google::protobuf::int32> idSet;
 	BOOST_FOREACH(auto& adplay, _policy.adplays())	// for (auto& adplay : _policy.adplays())
 		BOOST_FOREACH(auto id, adplay.adids())		// for (auto id : adplay.adids())
-			if (_mapAd[id].download_size() != 0)	// 需要下载
-				idSet.insert(id);
+		if (_mapAd[id].download_size() != 0)	// 需要下载
+			idSet.insert(id);
+	//for (int i = 0; i < _policy.adplays_size(); i++)
+	//{
+	//	auto& adplay = _policy.adplays(i);
+	//	for (int j = 0; j < adplay.adids_size(); j++)
+	//	{
+	//		int id = adplay.adids(j);
+	//		if (_mapAd[id].download_size() != 0)	// 需要下载
+	//			idSet.insert(id);
+	//	}
+	//}
 
 	// 删除失效的内存中的广告文件
 	for (auto it = _mapImage.begin(); it != _mapImage.end();)
@@ -350,21 +361,6 @@ void AdManager::bgnBusiness()
 
 }
 
-Ad AdManager::getAd(int adId)
-{
-	return _mapAd[adId];
-}
-
-std::unordered_map<uint32_t, Ad> AdManager::getAdList()
-{
-	return _mapAd;
-}
-
-AdPlayPolicy AdManager::getAdPlayPolicy()
-{
-	return _policy;
-}
-
 AdManager::AdManager() :
 	_timerPolicy(_iosBiz),
 	_timerAdList(_iosBiz),
@@ -377,7 +373,6 @@ AdManager::AdManager() :
 	_threadNet = boost::thread([this]() {_iosNet.run(); });
 	_threadBiz = boost::thread([this]() {_iosBiz.run(); });
 }
-
 
 AdManager::~AdManager()
 {

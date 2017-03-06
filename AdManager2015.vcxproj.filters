@@ -54,9 +54,6 @@
     <ClCompile Include="TcpSession.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="TcpSessionPool.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="ad\AdPlayPolicy.pb.cc">
       <Filter>Proto</Filter>
     </ClCompile>
@@ -84,9 +81,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="TcpSession.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="TcpSessionPool.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="ad\AdPlayPolicy.pb.h">

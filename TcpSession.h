@@ -2,8 +2,8 @@
 #include "Logger.h"
 #include "Message.pb.h"
 
+#include <boost/atomic.hpp>				// boost::atomic_int
 #include <boost/asio/ip/tcp.hpp>		// tcp::socket, tcp::acceptor
-#include <boost/atomic.hpp>
 #include <boost/thread/future.hpp>		// boost::shared_future, boost::promise
 #include <boost/thread/mutex.hpp>		// boost::mutex, boost::unique_lock
 #include <unordered_map>
