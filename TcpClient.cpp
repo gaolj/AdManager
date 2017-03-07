@@ -7,7 +7,7 @@ TcpClient::TcpClient(boost::asio::io_service& ios):
 	_logger(keywords::channel = "net")
 {
 	_session->_afterNetError = [this](){
-		this->connect(_endpoint);
+		this->asyncConnect(_endpoint);
 	};
 }
 
@@ -15,20 +15,20 @@ TcpClient::~TcpClient()
 {
 }
 
-bool TcpClient::waitConnected()
+bool TcpClient::syncConnect(const boost::asio::ip::tcp::endpoint& endpoint)
 {
-	if (_promiseConn.get_future().get())
+	boost::system::error_code ec;
+	_session->socket().connect(endpoint, ec);
+	if (!ec)
 		return true;
 	else
+	{
+		LOG_ERROR(_logger) << "syncConnect error:" << ec.value() << "	" << ec.message();
 		return false;
+	}
 }
 
-SessionPtr TcpClient::session()
-{
-	return _session;
-}
-
-void TcpClient::connect(const boost::asio::ip::tcp::endpoint& endpoint)
+void TcpClient::asyncConnect(const boost::asio::ip::tcp::endpoint& endpoint)
 {
 	_endpoint = endpoint;
 	if (_reconnectInterval < 10 * 60)
@@ -40,7 +40,6 @@ void TcpClient::connect(const boost::asio::ip::tcp::endpoint& endpoint)
 		if (!ec)
 		{
 			_reconnectInterval = 1;
-			_promiseConn.set_value(true);	// ??? boost::throw_exception<boost::promise_already_satisfied>
 			_session->start();
 		}
 		else
@@ -52,7 +51,7 @@ void TcpClient::connect(const boost::asio::ip::tcp::endpoint& endpoint)
 				boost::posix_time::seconds(_reconnectInterval));
 
 			_reconnectTimer.async_wait(
-				boost::bind(&TcpClient::connect, this, _endpoint));
+				boost::bind(&TcpClient::asyncConnect, this, _endpoint));
 		}
 	});
 }

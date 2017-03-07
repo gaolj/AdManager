@@ -390,7 +390,6 @@ void AdManager::bgnBusiness()
 }
 void AdManager::AdManagerImpl::bgnBusiness()
 {
-
 	if (_isBarServer)
 	{
 		LOG_DEBUG(_logger) << "启动广告服务端";
@@ -400,12 +399,13 @@ void AdManager::AdManagerImpl::bgnBusiness()
 	else
 		LOG_DEBUG(_logger) << "启动广告客户端";
 
-	_tcpClient.reset(new TcpClient(_iosNet));
-	_tcpClient->connect(_endpoint);
 	_iosBiz.post(
 		[this]()
 	{
-		_tcpClient->waitConnected();
+		_tcpClient.reset(new TcpClient(_iosNet));
+		while (!_tcpClient->syncConnect(_endpoint))
+			boost::this_thread::sleep(boost::posix_time::minutes(5));
+
 		requestAdPlayPolicy();
 	});
 
