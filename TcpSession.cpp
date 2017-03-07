@@ -38,7 +38,7 @@ void TcpSession::keepAlive()
 		LOG_ERROR(_logger) << "WSAIotcl(SIO_KEEPALIVE_VALS) failed:" << WSAGetLastError();
 }
 
-void TcpSession::start()
+void TcpSession::startSession()
 {
 	boost::system::error_code ec;
 	tcp::endpoint peer = _socket.remote_endpoint(ec);
@@ -55,9 +55,10 @@ void TcpSession::start()
 	readHead();
 }
 
-void TcpSession::stop()
+void TcpSession::stopSession()
 {
 	boost::system::error_code err;
+	_socket.shutdown(tcp::socket::shutdown_both, err);
 	_socket.close(err);
 }
 

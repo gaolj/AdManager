@@ -25,7 +25,7 @@ private:
 
 inline void TcpClient::stop()
 {
-	_session->stop();
+	_session->stopSession();
 }
 
 inline SessionPtr TcpClient::session()

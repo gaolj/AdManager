@@ -29,7 +29,7 @@ void TcpServer::stop()
 
 	unique_lock<mutex> lck(_mutex);
 	BOOST_FOREACH(auto session, _sessionPool)					// for (auto session : _sessionPool)
-		session->stop();
+		session->stopSession();
 	_sessionPool.clear();
 }
 
@@ -67,5 +67,5 @@ void TcpServer::startSession(std::shared_ptr<TcpSession> session)
 
 	unique_lock<mutex> lck(_mutex);
 	_sessionPool.insert(session);
-	session->start();
+	session->startSession();
 }

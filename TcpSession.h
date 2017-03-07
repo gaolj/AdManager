@@ -17,8 +17,8 @@ public:
 	~TcpSession();
 	boost::asio::ip::tcp::socket& socket();
 
-	void start();
-	void stop();
+	void startSession();
+	void stopSession();
 
 	boost::future<Message> request(Message msg);	// 作为客户机发出请求
 	void setRequestHandler(requestHandler handler);	// 作为服务器被请求

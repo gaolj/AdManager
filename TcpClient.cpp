@@ -13,6 +13,7 @@ TcpClient::TcpClient(boost::asio::io_service& ios):
 
 TcpClient::~TcpClient()
 {
+	_session->stopSession();
 }
 
 bool TcpClient::syncConnect(const boost::asio::ip::tcp::endpoint& endpoint)
@@ -21,7 +22,7 @@ bool TcpClient::syncConnect(const boost::asio::ip::tcp::endpoint& endpoint)
 	_session->socket().connect(endpoint, ec);
 	if (!ec)
 	{
-		_session->start();
+		_session->startSession();
 		return true;
 	}
 	else
@@ -43,7 +44,7 @@ void TcpClient::asyncConnect(const boost::asio::ip::tcp::endpoint& endpoint)
 		if (!ec)
 		{
 			_reconnectInterval = 1;
-			_session->start();
+			_session->startSession();
 		}
 		else
 		{
