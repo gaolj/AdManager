@@ -20,7 +20,10 @@ bool TcpClient::syncConnect(const boost::asio::ip::tcp::endpoint& endpoint)
 	boost::system::error_code ec;
 	_session->socket().connect(endpoint, ec);
 	if (!ec)
+	{
+		_session->start();
 		return true;
+	}
 	else
 	{
 		LOG_ERROR(_logger) << "syncConnect error:" << ec.value() << "	" << ec.message();
