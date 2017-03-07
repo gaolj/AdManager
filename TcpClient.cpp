@@ -18,8 +18,9 @@ TcpClient::~TcpClient()
 
 bool TcpClient::syncConnect(const boost::asio::ip::tcp::endpoint& endpoint)
 {
+	_endpoint = endpoint;
 	boost::system::error_code ec;
-	_session->socket().connect(endpoint, ec);
+	_session->socket().connect(_endpoint, ec);
 	if (!ec)
 	{
 		_session->startSession();
@@ -38,7 +39,7 @@ void TcpClient::asyncConnect(const boost::asio::ip::tcp::endpoint& endpoint)
 	if (_reconnectInterval < 10 * 60)
 		_reconnectInterval *= 2;
 
-	_session->socket().async_connect(endpoint,
+	_session->socket().async_connect(_endpoint,
 		[this](boost::system::error_code ec)
 	{
 		if (!ec)

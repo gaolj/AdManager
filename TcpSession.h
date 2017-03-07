@@ -19,6 +19,7 @@ public:
 
 	void startSession();
 	void stopSession();
+	bool isConnected();
 
 	boost::future<Message> request(Message msg);	// 作为客户机发出请求
 	void setRequestHandler(requestHandler handler);	// 作为服务器被请求
@@ -42,8 +43,13 @@ protected:
 	boost::asio::ip::tcp::socket _socket;
 
 	std::string _peerAddr;
+	boost::atomic_bool _isConnected;
 	logging::attribute_set::iterator _peerAddrAttr;
 	src::severity_channel_logger<SeverityLevel> _logger;
 };
-
 typedef std::shared_ptr<TcpSession> SessionPtr;
+
+inline bool TcpSession::isConnected()
+{
+	return _isConnected;
+}

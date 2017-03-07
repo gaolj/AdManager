@@ -11,6 +11,7 @@ using boost::unique_lock;
 TcpSession::TcpSession(boost::asio::io_service& ios):
 	_socket(ios),
 	_msgID(1),
+	_isConnected(false),
 	_logger(keywords::channel = "net")
 {
 }
@@ -35,11 +36,13 @@ void TcpSession::keepAlive()
 	alive.keepaliveinterval = 3000;
 
 	if (WSAIoctl(sock, SIO_KEEPALIVE_VALS, &alive, sizeof(alive), NULL, 0, &dwBytesRet, NULL, NULL) == SOCKET_ERROR)
-		LOG_ERROR(_logger) << "WSAIotcl(SIO_KEEPALIVE_VALS) failed:" << WSAGetLastError();
+		if (!WSAGetLastError())
+			LOG_ERROR(_logger) << "WSAIotcl(SIO_KEEPALIVE_VALS) failed:" << WSAGetLastError();
 }
 
 void TcpSession::startSession()
 {
+	_isConnected = true;
 	boost::system::error_code ec;
 	tcp::endpoint peer = _socket.remote_endpoint(ec);
 	_peerAddr = peer.address().to_string();
@@ -60,6 +63,7 @@ void TcpSession::stopSession()
 	boost::system::error_code err;
 	_socket.shutdown(tcp::socket::shutdown_both, err);
 	_socket.close(err);
+	_isConnected = false;
 }
 
 void TcpSession::readHead()
@@ -157,6 +161,7 @@ void TcpSession::handleNetError(const boost::system::error_code & ec)
 	LOG_NTFY(_logger) << logging::add_value("ErrorCode", ec.value()) << ec.message();
 	boost::system::error_code err;
 	_socket.close(err);
+	_isConnected = false;
 
 	Message msg;
 	msg.set_returncode(-1);

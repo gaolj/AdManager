@@ -12,6 +12,8 @@ public:
 	void asyncConnect(const boost::asio::ip::tcp::endpoint& endpoint);
 
 	SessionPtr session();
+	void setAutoReconnect(bool autoReconnect);
+	bool isConnected();
 	void stop();
 
 private:
@@ -31,5 +33,18 @@ inline void TcpClient::stop()
 inline SessionPtr TcpClient::session()
 {
 	return _session;
+}
+
+inline bool TcpClient::isConnected()
+{
+	return _session->isConnected();
+}
+
+inline void TcpClient::setAutoReconnect(bool autoReconnect)
+{
+	if (!autoReconnect)
+		_session->_afterNetError = [this]() {};
+	else
+		_session->_afterNetError = [this]() {this->asyncConnect(_endpoint);};
 }
 
