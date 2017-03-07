@@ -89,5 +89,8 @@
     <ClInclude Include="ad\Message.pb.h">
       <Filter>Proto</Filter>
     </ClInclude>
+    <ClInclude Include="AdManagerImpl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,12 +1,13 @@
 #include "AdManager.h"
+#include "AdManagerImpl.h"
 #include "TcpSession.h"
 #include "TcpClient.h"
 #include "TcpServer.h"
 
-#include <boost/locale.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/foreach.hpp>
-#include <boost/thread/once.hpp>
+#include <boost/locale.hpp>				// boost::locale::conv::from_utf
+#include <boost/foreach.hpp>			// BOOST_FOREACH
+#include <boost/thread/once.hpp>		// boost::once_flag	boost::call_once
+#include <boost/algorithm/string.hpp>	// boost::to_upper_copy
 #include <boost/network/protocol/http.hpp>
 #include <fstream>
 #include "md5.hh"
@@ -16,15 +17,36 @@ using boost::call_once;
 
 #pragma warning (disable: 4003)
 
-void AdManager::gb2312ToUTF8(Message& msg)
+
+Ad AdManager::getAd(int adId)
+{
+	return _pimpl->_mapAd[adId];
+}
+
+std::string AdManager::getAdFile(int adId)
+{
+	return _pimpl->_mapImage[adId];
+}
+
+std::unordered_map<uint32_t, Ad> AdManager::getAdList()
+{
+	return _pimpl->_mapAd;
+}
+
+AdPlayPolicy AdManager::getAdPlayPolicy()
+{
+	return _pimpl->_policy;
+}
+
+void AdManager::AdManagerImpl::gb2312ToUTF8(Message& msg)
 {
 	msg.set_returnmsg(boost::locale::conv::to_utf<char>(msg.returnmsg(), "gb2312"));
 }
-void AdManager::utf8ToGB2312(Message& msg)
+void AdManager::AdManagerImpl::utf8ToGB2312(Message& msg)
 {
 	msg.set_returnmsg(boost::locale::conv::from_utf(msg.returnmsg(), "gb2312"));
 }
-Ad& AdManager::utf8ToGB2312(Ad& ad)
+Ad& AdManager::AdManagerImpl::utf8ToGB2312(Ad& ad)
 {
 	ad.set_name(boost::locale::conv::from_utf(ad.name(), "gb2312"));
 	ad.set_filename(boost::locale::conv::from_utf(ad.filename(), "gb2312"));
@@ -50,7 +72,7 @@ AdManager& AdManager::getInstance()
 	return *pInstance;
 }
 
-bool AdManager::requestAd(int adId)
+bool AdManager::AdManagerImpl::requestAd(int adId)
 {
 	Message msgReq;
 	msgReq.set_method("getAd");
@@ -82,7 +104,7 @@ bool AdManager::requestAd(int adId)
 	}
 }
 
-void AdManager::requestAdList()
+void AdManager::AdManagerImpl::requestAdList()
 {
 	Message msgReq;
 	msgReq.set_method("getAdList");
@@ -113,7 +135,7 @@ void AdManager::requestAdList()
 		int timeout = 5 * 60;
 #endif
 		_timerAdList.expires_from_now(boost::posix_time::seconds(timeout));
-		_timerAdList.async_wait(boost::bind(&AdManager::requestAdList, this));
+		_timerAdList.async_wait(boost::bind(&AdManager::AdManagerImpl::requestAdList, this));
 		if (msgRsp.returncode() != 0)
 			LOG_DEBUG(_logger) << "请求广告列表失败:" << msgRsp.returncode() << ", " << msgRsp.returnmsg();
 		else
@@ -122,7 +144,7 @@ void AdManager::requestAdList()
 }
 
 
-void AdManager::requestAdPlayPolicy()
+void AdManager::AdManagerImpl::requestAdPlayPolicy()
 {
 	Message msgReq;
 	msgReq.set_method("getAdPlayPolicy");
@@ -152,7 +174,7 @@ void AdManager::requestAdPlayPolicy()
 			LOG_DEBUG(_logger) << "请求广告策略失败, content解析失败";
 	}
 
-	_timerPolicy.async_wait(boost::bind(&AdManager::requestAdPlayPolicy, this));
+	_timerPolicy.async_wait(boost::bind(&AdManager::AdManagerImpl::requestAdPlayPolicy, this));
 }
 
 void AdManager::handleRequest(std::weak_ptr<TcpSession> session, Message msg)
@@ -163,40 +185,40 @@ void AdManager::handleRequest(std::weak_ptr<TcpSession> session, Message msg)
 
 	if (msg.method() == "getAdPlayPolicy")
 	{
-		LOG_DEBUG(_logger) << "收到广告策略请求";
-		msg.set_content(_strPolicy);
+		LOG_DEBUG(_pimpl->_logger) << "收到广告策略请求";
+		msg.set_content(_pimpl->_strPolicy);
 	}
 	else if (msg.method() == "getAdList")
 	{		
-		LOG_DEBUG(_logger) << "收到广告列表请求";
-		msg.set_content(_strAdList);
+		LOG_DEBUG(_pimpl->_logger) << "收到广告列表请求";
+		msg.set_content(_pimpl->_strAdList);
 	}
 	else if (msg.method() == "getAd")
 	{
 		int id = 0;
 		memcpy(&id, msg.content().c_str(), sizeof(id));
-		LOG_DEBUG(_logger) << "收到广告请求, id=" << id;
+		LOG_DEBUG(_pimpl->_logger) << "收到广告请求, id=" << id;
 	}
 	else if (msg.method() == "getAdFile")
 	{
 		int id = 0;
 		memcpy(&id, msg.content().c_str(), sizeof(id));
-		LOG_DEBUG(_logger) << "收到广告文件下载请求, id=" << id;
+		LOG_DEBUG(_pimpl->_logger) << "收到广告文件下载请求, id=" << id;
 
-		if (_mapImage.find(id) == _mapImage.end())
+		if (_pimpl->_mapImage.find(id) == _pimpl->_mapImage.end())
 		{
 			msg.set_returncode(1);
 			msg.set_returnmsg("没有这个广告文件");
 		}
 		else
-			msg.set_content(_mapImage[id]);
+			msg.set_content(_pimpl->_mapImage[id]);
 	}
 
-	gb2312ToUTF8(msg);
+	_pimpl->gb2312ToUTF8(msg);
 	pSession->writeMsg(msg);
 }
 
-void AdManager::downloadAd(uint32_t id)
+void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 {
 	std::unordered_map<uint32_t, Ad>::iterator it = _mapAd.find(id);
 	if (it == _mapAd.end())
@@ -300,7 +322,7 @@ void AdManager::downloadAd(uint32_t id)
 	}
 }
 
-void AdManager::downloadAds()
+void AdManager::AdManagerImpl::downloadAds()
 {
 	// 提取该网吧所需的所有需要下载的广告ID，策略中去重
 	std::set<google::protobuf::int32> idSet;
@@ -336,12 +358,17 @@ void AdManager::downloadAds()
 		if (_mapImage.find(id) == _mapImage.end())
 		{
 			_timerDownload.expires_from_now(boost::posix_time::minutes(5));
-			_timerDownload.async_wait(boost::bind(&AdManager::downloadAds, this));
+			_timerDownload.async_wait(boost::bind(&AdManager::AdManagerImpl::downloadAds, this));
 			break;
 		}
 }
 
 void AdManager::setConfig(const std::string& peerAddr, int peerPort, int barId, bool isBarServer, int listenPort)
+{
+	_pimpl->setConfig(peerAddr, peerPort, barId, isBarServer, listenPort);
+}
+
+void AdManager::AdManagerImpl::setConfig(const std::string& peerAddr, int peerPort, int barId, bool isBarServer, int listenPort)
 {
 	using namespace boost::asio::ip;
 	_endpoint = tcp::endpoint(address::from_string(peerAddr), peerPort);
@@ -358,6 +385,10 @@ void AdManager::setConfig(const std::string& peerAddr, int peerPort, int barId, 
 }
 
 void AdManager::bgnBusiness()
+{
+	_pimpl->bgnBusiness();
+}
+void AdManager::AdManagerImpl::bgnBusiness()
 {
 
 	if (_isBarServer)
@@ -381,6 +412,10 @@ void AdManager::bgnBusiness()
 }
 
 AdManager::AdManager() :
+	_pimpl(new AdManagerImpl())
+{
+}
+AdManager::AdManagerImpl::AdManagerImpl() :
 	_timerPolicy(_iosBiz),
 	_timerAdList(_iosBiz),
 	_timerDownload(_iosBiz),
@@ -393,12 +428,21 @@ AdManager::AdManager() :
 	_threadBiz = boost::thread([this]() {_iosBiz.run(); });
 }
 
+
 AdManager::~AdManager()
+{
+}
+AdManager::AdManagerImpl::~AdManagerImpl()
 {
 	endBusiness();
 }
 
+
 void AdManager::endBusiness()
+{
+	_pimpl->endBusiness();
+}
+void AdManager::AdManagerImpl::endBusiness()
 {
 	_iosNet.stop();
 	_iosBiz.stop();

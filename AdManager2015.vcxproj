@@ -109,6 +109,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AdManager.h" />
+    <ClInclude Include="AdManagerImpl.h" />
     <ClInclude Include="ad\AdPlayPolicy.pb.h" />
     <ClInclude Include="ad\Message.pb.h" />
     <ClInclude Include="Logger.h" />
