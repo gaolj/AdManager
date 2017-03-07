@@ -97,7 +97,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AdManager.cpp" />
-    <ClCompile Include="AdTest.cpp" />
     <ClCompile Include="ad\AdPlayPolicy.pb.cc" />
     <ClCompile Include="ad\Message.pb.cc" />
     <ClCompile Include="Logger.cpp" />

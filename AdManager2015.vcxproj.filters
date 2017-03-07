@@ -33,9 +33,6 @@
     <ClCompile Include="AdManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="AdTest.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="Logger.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
