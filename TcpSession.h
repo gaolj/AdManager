@@ -29,17 +29,17 @@ public:
 protected:
 	void keepAlive();
 	void readHead();					// 接收head
-	void readBody(int bodyLen);			// 接收body
+	void readBody(uint32_t bodyLen);			// 接收body
 	requestHandler _requestHandler;		// 被请求的业务处理逻辑
 
 	boost::mutex _mutex;
 	boost::atomic_int _msgID;			// 请求的消息序列号
 	std::unordered_map<uint64_t, boost::promise<Message>> _reqPromiseMap;	// 还没有收到回应的请求
 
-	int _readLen;
-	int _writeLen;
-	char _readBuf[1024 * 1024 * 10];
-	char _writeBuf[1024 * 1024 * 10];
+	uint32_t _readLen;
+	uint32_t _writeLen;
+	std::vector<char> _readBuf;
+	std::vector<char> _writeBuf;
 	boost::asio::ip::tcp::socket _socket;
 
 	std::string _peerAddr;

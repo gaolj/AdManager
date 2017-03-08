@@ -11,6 +11,8 @@ using boost::unique_lock;
 TcpSession::TcpSession(boost::asio::io_service& ios):
 	_socket(ios),
 	_msgID(1),
+	_readBuf(1024),
+	_writeBuf(1024),
 	_isConnected(false),
 	_logger(keywords::channel = "net")
 {
@@ -86,8 +88,10 @@ void TcpSession::readHead()
 	});
 }
 
-void TcpSession::readBody(int bodyLen)
+void TcpSession::readBody(uint32_t bodyLen)
 {
+	if (_readBuf.capacity() < bodyLen)
+		_readBuf.reserve(bodyLen);
 	auto self(shared_from_this());
 	boost::asio::async_read(_socket,
 		boost::asio::buffer(boost::asio::buffer(_readBuf, bodyLen)),
@@ -97,7 +101,7 @@ void TcpSession::readBody(int bodyLen)
 		if (!ec)
 		{
 			Message msg;
-			if (msg.ParseFromArray(_readBuf, length) == false)
+			if (msg.ParseFromArray(_readBuf.data(), length) == false)
 			{
 				LOG_ERROR(_logger) << "Message parse error";
 				readHead();
@@ -135,9 +139,12 @@ void TcpSession::setRequestHandler(requestHandler handler)
 void TcpSession::writeMsg(const Message& msg)
 {
 	_writeLen = msg.ByteSize();
+	if (_writeBuf.capacity() < _writeLen)
+		_writeBuf.reserve(_writeLen);
+
 	int tmp = htonl(_writeLen);
-	memcpy(_writeBuf, &tmp, 4);
-	msg.SerializeToArray(_writeBuf + 4, sizeof(_writeBuf) - 4);
+	memcpy(_writeBuf.data(), &tmp, 4);
+	msg.SerializeToArray(_writeBuf.data() + 4, _writeBuf.size() - 4);
 
 	auto self(shared_from_this());
 	boost::asio::async_write(_socket,

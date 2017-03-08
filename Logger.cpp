@@ -63,6 +63,12 @@ void initLogger()
 	//else
 	//	logging::init_from_stream(settings);
 
+#ifdef _DEBUG
+	auto console_sink = logging::add_console_log(std::clog, keywords::format = "%TimeStamp%: %Message%");
+	console_sink->set_filter(_severity == debug || _severity >= error);
+	logging::core::get()->add_sink(console_sink);
+#endif
+
 	logging::add_file_log(
 		keywords::file_name = "log/advert1_%3N.log",
 		keywords::open_mode = mode,
