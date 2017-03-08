@@ -91,10 +91,13 @@ void TcpSession::readHead()
 void TcpSession::readBody(uint32_t bodyLen)
 {
 	if (_readBuf.capacity() < bodyLen)
+	{
 		_readBuf.reserve(bodyLen);
+		_readBuf.resize(bodyLen);
+	}
 	auto self(shared_from_this());
 	boost::asio::async_read(_socket,
-		boost::asio::buffer(boost::asio::buffer(_readBuf, bodyLen)),
+		boost::asio::buffer(boost::asio::buffer(_readBuf.data(), bodyLen)),
 		[this, self](boost::system::error_code ec, std::size_t length)
 	{
 		BOOST_LOG_NAMED_SCOPE("handle readBody");
@@ -139,16 +142,19 @@ void TcpSession::setRequestHandler(requestHandler handler)
 void TcpSession::writeMsg(const Message& msg)
 {
 	_writeLen = msg.ByteSize();
-	if (_writeBuf.capacity() < _writeLen)
-		_writeBuf.reserve(_writeLen);
+	if (_writeBuf.capacity() < 4 + _writeLen)
+	{
+		_writeBuf.reserve(4 + _writeLen);
+		_writeBuf.resize(4 + _writeLen);
+	}
 
 	int tmp = htonl(_writeLen);
 	memcpy(_writeBuf.data(), &tmp, 4);
-	msg.SerializeToArray(_writeBuf.data() + 4, _writeBuf.size() - 4);
+	msg.SerializeToArray(_writeBuf.data() + 4, _writeLen);
 
 	auto self(shared_from_this());
 	boost::asio::async_write(_socket,
-		boost::asio::buffer(_writeBuf, 4 + _writeLen),
+		boost::asio::buffer(_writeBuf.data(), 4 + _writeLen),
 		[this, self](boost::system::error_code ec, std::size_t /*length*/)
 	{
 		if (!ec)
