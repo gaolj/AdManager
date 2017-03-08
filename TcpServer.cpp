@@ -61,6 +61,8 @@ void TcpServer::startSession(std::shared_ptr<TcpSession> session)
 {
 	session->_afterNetError = [this, session]()
 	{
+		session->_afterNetError = NULL;
+		session->setRequestHandler(NULL);
 		unique_lock<mutex> lck(_mutex);
 		_sessionPool.erase(session);
 	};
