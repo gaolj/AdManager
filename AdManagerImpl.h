@@ -7,6 +7,10 @@
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
+void gb2312ToUTF8(Message& msg);
+void utf8ToGB2312(Message& msg);
+Ad&  utf8ToGB2312(Ad& ad);
+
 class TcpClient;
 class TcpServer;
 class AdManager::AdManagerImpl
@@ -26,11 +30,7 @@ public:
 
 	void endBusiness();				// 停业广告业务
 
-	void gb2312ToUTF8(Message& msg);
-	void utf8ToGB2312(Message& msg);
-	Ad&  utf8ToGB2312(Ad& ad);
-private:
-
+public:
 	// 向广告中心请求数据
 	bool requestAd(int adId);
 	void requestAdList();
@@ -38,6 +38,7 @@ private:
 	void downloadAds();
 	void downloadAd(uint32_t id);
 
+public:
 	int _barId;
 	int _listenPort;
 	bool _isBarServer;

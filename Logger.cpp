@@ -50,6 +50,12 @@ logging::formatting_ostream& operator <<
 
 void initLogger()
 {
+	static bool inited = false;
+	if (inited == false)
+		inited = true;
+	else
+		return;
+
 #ifdef _DEBUG
 	auto mode = std::ios::trunc;
 #else
@@ -65,7 +71,7 @@ void initLogger()
 
 #ifdef _DEBUG
 	auto console_sink = logging::add_console_log(std::clog, keywords::format = "%TimeStamp%: %Message%");
-	console_sink->set_filter(_severity == debug || _severity >= error);
+	console_sink->set_filter(_severity >= info);
 	logging::core::get()->add_sink(console_sink);
 #endif
 

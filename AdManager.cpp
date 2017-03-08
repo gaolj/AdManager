@@ -38,15 +38,15 @@ AdPlayPolicy AdManager::getAdPlayPolicy()
 	return _pimpl->_policy;
 }
 
-void AdManager::AdManagerImpl::gb2312ToUTF8(Message& msg)
+void gb2312ToUTF8(Message& msg)
 {
 	msg.set_returnmsg(boost::locale::conv::to_utf<char>(msg.returnmsg(), "gb2312"));
 }
-void AdManager::AdManagerImpl::utf8ToGB2312(Message& msg)
+void utf8ToGB2312(Message& msg)
 {
 	msg.set_returnmsg(boost::locale::conv::from_utf(msg.returnmsg(), "gb2312"));
 }
-Ad& AdManager::AdManagerImpl::utf8ToGB2312(Ad& ad)
+Ad& utf8ToGB2312(Ad& ad)
 {
 	ad.set_name(boost::locale::conv::from_utf(ad.name(), "gb2312"));
 	ad.set_filename(boost::locale::conv::from_utf(ad.filename(), "gb2312"));
@@ -214,7 +214,7 @@ void AdManager::handleRequest(std::weak_ptr<TcpSession> session, Message msg)
 			msg.set_content(_pimpl->_mapImage[id]);
 	}
 
-	_pimpl->gb2312ToUTF8(msg);
+	gb2312ToUTF8(msg);
 	pSession->writeMsg(msg);
 }
 
@@ -303,13 +303,12 @@ void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 			context.finalize();
 			std::string md5 = context.hex_digest();	// hex_digest有泄漏
 			if (boost::to_upper_copy(ad.md5()) != boost::to_upper_copy(md5))
+				LOG_DEBUG(_logger) << "下载广告文件(" << ad.filename() << ")的md5校验失败";
+			else
 			{
-				LOG_DEBUG(_logger) << "下载的广告文件(" << ad.filename() << ")md5校验失败";
-				return;
+				LOG_DEBUG(_logger) << "下载广告文件(" << ad.filename() << ")成功";
+				_mapImage.insert(std::make_pair(id, body));
 			}
-
-			_mapImage.insert(std::make_pair(id, body));
-			LOG_DEBUG(_logger) << "下载广告文件(" << ad.filename() << ")成功";
 		}
 		catch (const boost::exception& ex)
 		{
@@ -402,7 +401,6 @@ void AdManager::AdManagerImpl::bgnBusiness()
 	_iosBiz.post(
 		[this]()
 	{
-		_tcpClient.reset(new TcpClient(_iosNet));
 		while (!_tcpClient->syncConnect(_endpoint))
 			boost::this_thread::sleep(boost::posix_time::minutes(5));
 
@@ -414,6 +412,7 @@ void AdManager::AdManagerImpl::bgnBusiness()
 AdManager::AdManager() :
 	_pimpl(new AdManagerImpl())
 {
+	initLogger();
 }
 AdManager::AdManagerImpl::AdManagerImpl() :
 	_timerPolicy(_iosBiz),
@@ -421,11 +420,11 @@ AdManager::AdManagerImpl::AdManagerImpl() :
 	_timerDownload(_iosBiz),
 	_logger(keywords::channel = "ad")
 {
-	initLogger();
 	_workNet.reset(new boost::asio::io_service::work(_iosNet));
 	_workBiz.reset(new boost::asio::io_service::work(_iosBiz));
 	_threadNet = boost::thread([this]() {_iosNet.run(); });
 	_threadBiz = boost::thread([this]() {_iosBiz.run(); });
+	_tcpClient.reset(new TcpClient(_iosNet));
 }
 
 
@@ -446,6 +445,8 @@ void AdManager::AdManagerImpl::endBusiness()
 {
 	_iosNet.stop();
 	_iosBiz.stop();
-	_tcpClient->stop();
-	_tcpServer->stop();
+	if (_tcpClient)
+		_tcpClient->stop();
+	if (_tcpServer)
+		_tcpServer->stop();
 }

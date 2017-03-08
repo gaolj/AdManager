@@ -33,11 +33,11 @@ public:
 
 	void handleRequest(std::weak_ptr<TcpSession> session, Message msg);	// 处理网吧客户端的请求
 
+	class AdManagerImpl;			// public, 可以在boost::unit_test中使用
 private:
 	AdManager();
 	~AdManager();
 
-	class AdManagerImpl;
 	std::unique_ptr<AdManagerImpl> _pimpl;
 };
 
