@@ -31,6 +31,8 @@ public:
 	void endBusiness();				// 停业广告业务
 
 public:
+	void initResponseBuf();
+
 	// 向广告中心请求数据
 	bool requestAd(int adId);
 	void requestAdList();
@@ -61,10 +63,11 @@ public:
 public:
 	// 以下成员，都在唯一的广告业务线程中访问，所以不需要同步
 	AdPlayPolicy _policy;
-	std::string _strPolicy;
-	std::string _strAdList;
+	std::shared_ptr<std::string> _bufPolicy;
+	std::shared_ptr<std::string> _bufAdList;
 	std::unordered_map<uint32_t, Ad> _mapAd;
-	std::unordered_map<uint32_t, std::string> _mapImage;
+	std::unordered_map<uint32_t, std::string> _Images;		// buf for adfile
+	std::unordered_map<uint32_t, std::shared_ptr<std::string>> _bufImages;	// response msg buf 
 
 	src::severity_channel_logger<SeverityLevel> _logger;
 };

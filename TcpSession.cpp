@@ -148,11 +148,12 @@ std::pair<bool, boost::promise<Message>> TcpSession::findReqPromise(const Messag
 	{
 		for (auto it = _lstRequestCtx.begin(); it != _lstRequestCtx.end(); it++)
 			if (it->method == msg.method())
-			{
-				auto ret = std::make_pair(true, std::move(it->prom));
-				_lstRequestCtx.erase(it);
-				return ret;
-			}
+				if (it->method != "getAdFile" || it->content == msg.returnmsg())
+				{
+					auto ret = std::make_pair(true, std::move(it->prom));
+					_lstRequestCtx.erase(it);
+					return ret;
+				}
 	}
 
 	return std::make_pair(false, boost::promise<Message>());
@@ -178,8 +179,23 @@ void TcpSession::writeMsg(const Message& msg)
 	{
 		if (!ec)
 		{
-			//heartbeatTimer.expires_from_now(
-			//	boost::posix_time::seconds(pClient->_heartbeatInterval));
+		}
+		else
+		{
+			handleNetError(ec);
+		}
+	});
+}
+
+void TcpSession::writeData(std::shared_ptr<std::string> data)
+{
+	auto self(shared_from_this());
+	boost::asio::async_write(_socket,
+		boost::asio::buffer(*data),
+		[this, self, data](boost::system::error_code ec, std::size_t /*length*/)
+	{
+		if (!ec)
+		{
 		}
 		else
 		{
@@ -217,6 +233,7 @@ boost::future<Message> TcpSession::request(Message msg)
 	RequestCtx ctx;
 	ctx.msgID = msg.id();
 	ctx.method = msg.method();
+	ctx.content = msg.content();
 	ctx.reqTime = boost::posix_time::second_clock::local_time();
 	auto fut = ctx.prom.get_future();
 

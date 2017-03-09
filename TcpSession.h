@@ -15,6 +15,7 @@ struct RequestCtx
 {
 	uint64_t msgID;
 	std::string method;
+	std::string content;
 	boost::posix_time::ptime reqTime;
 	boost::promise<Message> prom;
 };
@@ -33,6 +34,7 @@ public:
 	boost::future<Message> request(Message msg);	// 作为客户机发出请求
 	std::function<void(Message msg)> _requestHandler;// 处理客户端的请求
 	void writeMsg(const Message& msg);				// 发送数据
+	void writeData(std::shared_ptr<std::string> data);// 发送数据
 	void handleNetError(const boost::system::error_code& ec);
 	std::function<void()> _afterNetError;
 protected:

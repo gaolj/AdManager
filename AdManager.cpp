@@ -23,9 +23,9 @@ Ad AdManager::getAd(int adId)
 	return _pimpl->_mapAd[adId];
 }
 
-std::string AdManager::getAdFile(int adId)
+std::shared_ptr<std::string> AdManager::getAdFile(int adId)
 {
-	return _pimpl->_mapImage[adId];
+	return _pimpl->_bufImages[adId];
 }
 
 std::unordered_map<uint32_t, Ad> AdManager::getAdList()
@@ -117,7 +117,17 @@ void AdManager::AdManagerImpl::requestAdList()
 	if (msgRsp.returncode() == 0 && ads.ParseFromString(msgRsp.content()) == true)
 	{
 		LOG_DEBUG(_logger) << "请求广告列表成功";
-		_strAdList = msgRsp.content();
+		Message msgAdList;
+		msgAdList.set_id(0);
+		msgAdList.set_returncode(0);
+		msgAdList.set_method("getAdList");
+		msgAdList.set_content(msgRsp.content());
+		std::stringstream ssAdList;
+		int len = htonl(msgAdList.ByteSize());
+		ssAdList.write((char *)&len, 4);;
+		msgAdList.SerializeToOstream(&ssAdList);
+		_bufAdList.reset(new std::string(ssAdList.str()));
+
 		for (int i = 0; i < ads.ads_size(); i++)
 		{
 			auto ad = *ads.mutable_ads(i);
@@ -161,7 +171,17 @@ void AdManager::AdManagerImpl::requestAdPlayPolicy()
 	{
 		LOG_DEBUG(_logger) << "请求广告策略成功";
 		_timerPolicy.expires_from_now(boost::posix_time::hours(6));
-		_strPolicy = msgRsp.content();
+		Message msg;
+		msg.set_id(0);
+		msg.set_returncode(0);
+		msg.set_method("getAdPlayPolicy");
+		msg.set_content(msgRsp.content());
+		std::stringstream ss;
+		int len = htonl(msg.ByteSize());
+		ss.write((char *)&len, 4);;
+		msg.SerializeToOstream(&ss);
+		_bufPolicy.reset(new std::string(ss.str()));
+
 		requestAdList();
 	}
 	else
@@ -176,18 +196,21 @@ void AdManager::AdManagerImpl::requestAdPlayPolicy()
 
 	_timerPolicy.async_wait(boost::bind(&AdManager::AdManagerImpl::requestAdPlayPolicy, this));
 }
+#include <sstream>      // std::stringstream
+#define ERROR_METHOD_HANDLER_NOT_EXIST	(1)
+#define ERROR_DATA_NOT_EXIST			(2)
 
 void AdManager::handleRequest(std::shared_ptr<TcpSession> session, Message msg)
 {
 	if (msg.method() == "getAdPlayPolicy")
 	{
 		LOG_DEBUG(_pimpl->_logger) << "收到广告策略请求";
-		msg.set_content(_pimpl->_strPolicy);
+		session->writeData(_pimpl->_bufPolicy);
 	}
 	else if (msg.method() == "getAdList")
 	{		
 		LOG_DEBUG(_pimpl->_logger) << "收到广告列表请求";
-		msg.set_content(_pimpl->_strAdList);
+		session->writeData(_pimpl->_bufAdList);
 	}
 	else if (msg.method() == "getAd")
 	{
@@ -201,17 +224,22 @@ void AdManager::handleRequest(std::shared_ptr<TcpSession> session, Message msg)
 		memcpy(&id, msg.content().c_str(), sizeof(id));
 		LOG_DEBUG(_pimpl->_logger) << "收到广告文件下载请求, id=" << id;
 
-		if (_pimpl->_mapImage.find(id) == _pimpl->_mapImage.end())
+		auto it = _pimpl->_bufImages.find(id);
+		if (it == _pimpl->_bufImages.end())
 		{
-			msg.set_returncode(1);
-			msg.set_returnmsg("没有这个广告文件");
+			msg.set_returncode(ERROR_DATA_NOT_EXIST);
+			msg.set_returnmsg("no AdFile");
+			session->writeMsg(msg);
 		}
 		else
-			msg.set_content(_pimpl->_mapImage[id]);
+			session->writeData(it->second);
 	}
-
-	gb2312ToUTF8(msg);
-	session->writeMsg(msg);
+	else
+	{
+		msg.set_returncode(ERROR_METHOD_HANDLER_NOT_EXIST);
+		msg.set_returnmsg("method handler not exist");
+		session->writeMsg(msg);
+	}
 }
 
 void AdManager::AdManagerImpl::downloadAd(uint32_t id)
@@ -255,9 +283,22 @@ void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 					LOG_DEBUG(_logger) << "下载的广告文件(" << ad.filename() << ")md5校验失败";
 					continue;
 				}
+				else
+					LOG_DEBUG(_logger) << "下载广告文件(" << ad.filename() << ")成功";
 
-				_mapImage.insert(std::make_pair(id, body));
-				LOG_DEBUG(_logger) << "下载广告文件(" << ad.filename() << ")成功";
+				// server端缓存广告文件回应msg
+				Message msg;
+				msg.set_id(0);
+				msg.set_returncode(0);
+				msg.set_method("getAdFile");
+				msg.set_content(body);
+				msg.set_returnmsg((char *)&id, 4);
+				std::stringstream ss;
+				int len = htonl(msg.ByteSize());
+				ss.write((char *)&len, 4);;
+				msg.SerializeToOstream(&ss);
+				_bufImages.insert(std::make_pair(id, std::make_shared<std::string>(ss.str())));
+
 
 				std::ofstream ofs(ad.filename(), std::ofstream::binary);
 				ofs << body << std::endl;
@@ -303,7 +344,7 @@ void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 			else
 			{
 				LOG_DEBUG(_logger) << "下载广告文件(" << ad.filename() << ")成功";
-				_mapImage.insert(std::make_pair(id, body));
+				_Images.insert(std::make_pair(id, body));
 			}
 		}
 		catch (const boost::exception& ex)
@@ -325,32 +366,22 @@ void AdManager::AdManagerImpl::downloadAds()
 		BOOST_FOREACH(auto id, adplay.adids())		// for (auto id : adplay.adids())
 		if (_mapAd[id].download_size() != 0)	// 需要下载
 			idSet.insert(id);
-	//for (int i = 0; i < _policy.adplays_size(); i++)
-	//{
-	//	auto& adplay = _policy.adplays(i);
-	//	for (int j = 0; j < adplay.adids_size(); j++)
-	//	{
-	//		int id = adplay.adids(j);
-	//		if (_mapAd[id].download_size() != 0)	// 需要下载
-	//			idSet.insert(id);
-	//	}
-	//}
 
 	// 删除失效的内存中的广告文件
-	for (auto it = _mapImage.begin(); it != _mapImage.end();)
+	for (auto it = _bufImages.begin(); it != _bufImages.end();)
 		if (idSet.find(it->first) != idSet.end())
 			it++;
 		else
-			it = _mapImage.erase(it);
+			it = _bufImages.erase(it);
 
 	// 下载每个广告
 	BOOST_FOREACH(auto id, idSet)					// for (auto id : idSet)
-		if (_mapImage.find(id) == _mapImage.end())
+		if (_bufImages.find(id) == _bufImages.end())
 			downloadAd(id);
 
 	// 如果存在下载未完成的，则过5分钟后再次下载
 	BOOST_FOREACH(auto id, idSet)					// for (auto id : idSet)
-		if (_mapImage.find(id) == _mapImage.end())
+		if (_bufImages.find(id) == _bufImages.end())
 		{
 			_timerDownload.expires_from_now(boost::posix_time::minutes(5));
 			_timerDownload.async_wait(boost::bind(&AdManager::AdManagerImpl::downloadAds, this));
@@ -416,6 +447,8 @@ AdManager::AdManagerImpl::AdManagerImpl() :
 	_timerDownload(_iosBiz),
 	_logger(keywords::channel = "ad")
 {
+	initResponseBuf();
+
 	_workNet.reset(new boost::asio::io_service::work(_iosNet));
 	_workBiz.reset(new boost::asio::io_service::work(_iosBiz));
 	_threadNet = boost::thread([this]() {_iosNet.run(); });
@@ -423,7 +456,30 @@ AdManager::AdManagerImpl::AdManagerImpl() :
 	_tcpClient.reset(new TcpClient(_iosNet));
 }
 
+void AdManager::AdManagerImpl::initResponseBuf()
+{
+	Message msgPolicy;
+	msgPolicy.set_id(0);
+	msgPolicy.set_returncode(ERROR_DATA_NOT_EXIST);
+	msgPolicy.set_method("getAdPlayPolicy");
+	msgPolicy.set_returnmsg("no AdPlayPolicy");
+	std::stringstream ssPolicy;
+	int len = htonl(msgPolicy.ByteSize());
+	ssPolicy.write((char *)&len, 4);;
+	msgPolicy.SerializeToOstream(&ssPolicy);
+	_bufPolicy.reset(new std::string(ssPolicy.str()));
 
+	Message msgAdList;
+	msgAdList.set_id(0);
+	msgAdList.set_returncode(ERROR_DATA_NOT_EXIST);
+	msgAdList.set_method("getAdList");
+	msgAdList.set_returnmsg("no AdList");
+	std::stringstream ssAdList;
+	len = htonl(msgAdList.ByteSize());
+	ssAdList.write((char *)&len, 4);;
+	msgAdList.SerializeToOstream(&ssAdList);
+	_bufAdList.reset(new std::string(ssAdList.str()));
+}
 AdManager::~AdManager()
 {
 }
