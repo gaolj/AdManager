@@ -43,8 +43,8 @@ inline bool TcpClient::isConnected()
 inline void TcpClient::setAutoReconnect(bool autoReconnect)
 {
 	if (!autoReconnect)
-		_session->_afterNetError = [this]() {};
+		_session->_afterNetError = NULL;
 	else
-		_session->_afterNetError = [this]() {this->asyncConnect(_endpoint);};
+		_session->_afterNetError = [this]() {asyncConnect(_endpoint);};
 }
 

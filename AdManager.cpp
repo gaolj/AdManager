@@ -177,12 +177,8 @@ void AdManager::AdManagerImpl::requestAdPlayPolicy()
 	_timerPolicy.async_wait(boost::bind(&AdManager::AdManagerImpl::requestAdPlayPolicy, this));
 }
 
-void AdManager::handleRequest(std::weak_ptr<TcpSession> session, Message msg)
+void AdManager::handleRequest(std::shared_ptr<TcpSession> session, Message msg)
 {
-	auto pSession = session.lock();
-	if (!pSession)
-		return;
-
 	if (msg.method() == "getAdPlayPolicy")
 	{
 		LOG_DEBUG(_pimpl->_logger) << "收到广告策略请求";
@@ -215,7 +211,7 @@ void AdManager::handleRequest(std::weak_ptr<TcpSession> session, Message msg)
 	}
 
 	gb2312ToUTF8(msg);
-	pSession->writeMsg(msg);
+	session->writeMsg(msg);
 }
 
 void AdManager::AdManagerImpl::downloadAd(uint32_t id)

@@ -31,7 +31,7 @@ public:
 
 	std::unordered_map<uint32_t, Ad> getAdList();	// 所有广告信息
 
-	void handleRequest(std::weak_ptr<TcpSession> session, Message msg);	// 处理网吧客户端的请求
+	void handleRequest(std::shared_ptr<TcpSession> session, Message msg);	// 处理网吧客户端的请求
 
 	class AdManagerImpl;			// public, 可以在boost::unit_test中使用
 private:

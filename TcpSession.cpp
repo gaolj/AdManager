@@ -14,6 +14,8 @@ TcpSession::TcpSession(boost::asio::io_service& ios):
 	_readBuf(1024),
 	_writeBuf(1024),
 	_isConnected(false),
+	_afterNetError(NULL),
+	_requestHandler(NULL),
 	_logger(keywords::channel = "net")
 {
 }
@@ -121,7 +123,8 @@ void TcpSession::readBody(uint32_t bodyLen)
 			else	//  ’µΩ«Î«Û
 			{
 				msg.set_returncode(0);
-				_requestHandler(std::move(msg));
+				if (_requestHandler)
+					_requestHandler(std::move(msg));
 			}
 			lck.unlock();
 
@@ -132,11 +135,6 @@ void TcpSession::readBody(uint32_t bodyLen)
 			handleNetError(ec);
 		}
 	});
-}
-
-void TcpSession::setRequestHandler(requestHandler handler)
-{
-	_requestHandler = handler;
 }
 
 void TcpSession::writeMsg(const Message& msg)
@@ -187,7 +185,8 @@ void TcpSession::handleNetError(const boost::system::error_code & ec)
 	}
 	_reqPromiseMap.clear();
 
-	_afterNetError();
+	if (_afterNetError)
+		_afterNetError();
 }
 
 boost::future<Message> TcpSession::request(Message msg)

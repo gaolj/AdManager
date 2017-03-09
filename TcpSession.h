@@ -22,15 +22,14 @@ public:
 	bool isConnected();
 
 	boost::future<Message> request(Message msg);	// 作为客户机发出请求
-	void setRequestHandler(requestHandler handler);	// 作为服务器被请求
+	std::function<void(Message msg)> _requestHandler;// 处理客户端的请求
 	void writeMsg(const Message& msg);				// 发送数据
 	void handleNetError(const boost::system::error_code& ec);
 	std::function<void()> _afterNetError;
 protected:
 	void keepAlive();
 	void readHead();					// 接收head
-	void readBody(uint32_t bodyLen);			// 接收body
-	requestHandler _requestHandler;		// 被请求的业务处理逻辑
+	void readBody(uint32_t bodyLen);	// 接收body
 
 	boost::mutex _mutex;
 	boost::atomic_int _msgID;			// 请求的消息序列号

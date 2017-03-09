@@ -45,8 +45,9 @@ void TcpServer::doAccept()
 
 		if (!ec)
 		{
-			session->setRequestHandler(
-				boost::bind(&AdManager::handleRequest, &AdManager::getInstance(), session, _1));
+			session->_requestHandler = boost::bind(&AdManager::handleRequest,
+													&AdManager::getInstance(),
+													session, _1);
 
 			startSession(session);
 		}
@@ -62,7 +63,7 @@ void TcpServer::startSession(std::shared_ptr<TcpSession> session)
 	session->_afterNetError = [this, session]()
 	{
 		session->_afterNetError = NULL;
-		session->setRequestHandler(NULL);
+		session->_requestHandler = NULL;
 		unique_lock<mutex> lck(_mutex);
 		_sessionPool.erase(session);
 	};
