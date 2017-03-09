@@ -92,6 +92,7 @@
   <ItemGroup>
     <None Include="AdPlayPolicy.proto" />
     <None Include="md5.hh" />
+    <None Include="Message.proto" />
     <None Include="protoc.exe" />
     <None Include="ReadMe.txt" />
   </ItemGroup>

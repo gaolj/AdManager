@@ -28,6 +28,7 @@
     <None Include="protoc.exe">
       <Filter>Proto</Filter>
     </None>
+    <None Include="Message.proto" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AdManager.cpp">

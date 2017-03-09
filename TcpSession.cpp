@@ -1,7 +1,6 @@
 #include "TcpSession.h"
 #include "mstcpip.h"			// struct tcp_keepalive
 #include <boost/asio.hpp>
-#include <boost/foreach.hpp>
 
 using std::string;
 using boost::asio::ip::tcp;
@@ -113,20 +112,15 @@ void TcpSession::readBody(uint32_t bodyLen)
 				return;
 			}
 
-			unique_lock<mutex> lck(_mutex);
-			auto found = _reqPromiseMap.find(msg.id());
-			if (found != _reqPromiseMap.end())	// 收到回应
-			{
-				found->second.set_value((msg));
-				_reqPromiseMap.erase(found);
-			}
-			else	// 收到请求
+			auto ret = findReqPromise(msg);
+			if (ret.first)	// 收到回应
+				ret.second.set_value(msg);
+			else			// 收到请求
 			{
 				msg.set_returncode(0);
 				if (_requestHandler)
 					_requestHandler(std::move(msg));
 			}
-			lck.unlock();
 
 			readHead();
 		}
@@ -135,6 +129,33 @@ void TcpSession::readBody(uint32_t bodyLen)
 			handleNetError(ec);
 		}
 	});
+}
+
+std::pair<bool, boost::promise<Message>> TcpSession::findReqPromise(const Message& msg)
+{
+	unique_lock<mutex> lck(_mutex);
+	if (msg.id() != 0)
+	{
+		for (auto it= _lstRequestCtx.begin(); it != _lstRequestCtx.end(); it++)
+			if (it->msgID == msg.id())
+			{
+				auto ret = std::make_pair(true, std::move(it->prom));
+				_lstRequestCtx.erase(it);
+				return ret;
+			}
+	}
+	else
+	{
+		for (auto it = _lstRequestCtx.begin(); it != _lstRequestCtx.end(); it++)
+			if (it->method == msg.method())
+			{
+				auto ret = std::make_pair(true, std::move(it->prom));
+				_lstRequestCtx.erase(it);
+				return ret;
+			}
+	}
+
+	return std::make_pair(false, boost::promise<Message>());
 }
 
 void TcpSession::writeMsg(const Message& msg)
@@ -179,11 +200,12 @@ void TcpSession::handleNetError(const boost::system::error_code & ec)
 	msg.set_returnmsg(ec.message());
 
 	unique_lock<mutex> lck(_mutex);
-	BOOST_FOREACH(auto& item, _reqPromiseMap)		// for (auto& item : _reqPromiseMap)
+	for (auto it = _lstRequestCtx.begin(); it != _lstRequestCtx.end(); it++)
 	{
-		item.second.set_value(msg);
+		it->prom.set_value(msg);
 	}
-	_reqPromiseMap.clear();
+	_lstRequestCtx.clear();
+	lck.unlock();
 
 	if (_afterNetError)
 		_afterNetError();
@@ -191,11 +213,17 @@ void TcpSession::handleNetError(const boost::system::error_code & ec)
 
 boost::future<Message> TcpSession::request(Message msg)
 {
-	unique_lock<mutex> lck(_mutex);
 	msg.set_id(_msgID++);
-	auto retPair = _reqPromiseMap.insert(std::make_pair(msg.id(), boost::promise<Message>()));	// https://msdn.microsoft.com/zh-cn/library/dd998231(v=vs.100).aspx
+	RequestCtx ctx;
+	ctx.msgID = msg.id();
+	ctx.method = msg.method();
+	ctx.reqTime = boost::posix_time::second_clock::local_time();
+	auto fut = ctx.prom.get_future();
+
+	unique_lock<mutex> lck(_mutex);
+	_lstRequestCtx.push_back(std::move(ctx));
 	lck.unlock();
 
 	writeMsg(msg);
-	return retPair.first->second.get_future();
+	return std::move(fut);
 }
