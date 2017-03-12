@@ -10,8 +10,6 @@ using boost::unique_lock;
 TcpSession::TcpSession(boost::asio::io_service& ios):
 	_socket(ios),
 	_msgID(1),
-	_readBuf(1024),
-	_writeBuf(1024),
 	_isConnected(false),
 	_afterNetError(NULL),
 	_requestHandler(NULL),
@@ -72,14 +70,14 @@ void TcpSession::stopSession()
 void TcpSession::readHead()
 {
 	auto self(shared_from_this());
-	boost::asio::async_read(_socket,
-		boost::asio::buffer(&_readLen, sizeof(_readLen)),
+	boost::asio::async_read(_socket, _recvBuf, boost::asio::transfer_exactly(4), 
 		[this, self](boost::system::error_code ec, std::size_t /*length*/)
 	{
 		if (!ec)
 		{
-			_readLen = ntohl(_readLen);
-			readBody(_readLen);
+			int bodyLen = ntohl(*boost::asio::buffer_cast<const int*>(_recvBuf.data()));
+			_recvBuf.consume(4);
+			readBody(bodyLen);
 		}
 		else
 		{
@@ -91,37 +89,30 @@ void TcpSession::readHead()
 
 void TcpSession::readBody(uint32_t bodyLen)
 {
-	if (_readBuf.capacity() < bodyLen)
-	{
-		_readBuf.reserve(bodyLen);
-		_readBuf.resize(bodyLen);
-	}
 	auto self(shared_from_this());
-	boost::asio::async_read(_socket,
-		boost::asio::buffer(boost::asio::buffer(_readBuf.data(), bodyLen)),
+	boost::asio::async_read(_socket, _recvBuf, boost::asio::transfer_exactly(bodyLen),
 		[this, self](boost::system::error_code ec, std::size_t length)
 	{
 		BOOST_LOG_NAMED_SCOPE("handle readBody");
 		if (!ec)
 		{
 			Message msg;
-			if (msg.ParseFromArray(_readBuf.data(), length) == false)
-			{
+			if (msg.ParseFromArray(boost::asio::buffer_cast<const void*>(_recvBuf.data()), length) == false)
 				LOG_ERROR(_logger) << "Message parse error";
-				readHead();
-				return;
-			}
-
-			auto ret = findReqPromise(msg);
-			if (ret.first)	// 收到回应
-				ret.second.set_value(msg);
-			else			// 收到请求
+			else
 			{
-				msg.set_returncode(0);
-				if (_requestHandler)
-					_requestHandler(std::move(msg));
+				auto ret = findReqPromise(msg);
+				if (ret.first)	// 收到回应
+					ret.second.set_value(msg);
+				else			// 收到请求
+				{
+					msg.set_returncode(0);
+					if (_requestHandler)
+						_requestHandler(std::move(msg));
+				}
 			}
 
+			_recvBuf.consume(length);
 			readHead();
 		}
 		else
@@ -134,47 +125,26 @@ void TcpSession::readBody(uint32_t bodyLen)
 std::pair<bool, boost::promise<Message>> TcpSession::findReqPromise(const Message& msg)
 {
 	unique_lock<mutex> lck(_mutex);
-	if (msg.id() != 0)
-	{
-		for (auto it= _lstRequestCtx.begin(); it != _lstRequestCtx.end(); it++)
-			if (it->msgID == msg.id())
-			{
-				auto ret = std::make_pair(true, std::move(it->prom));
-				_lstRequestCtx.erase(it);
-				return ret;
-			}
-	}
-	else
-	{
-		for (auto it = _lstRequestCtx.begin(); it != _lstRequestCtx.end(); it++)
-			if (it->method == msg.method())
-				if (it->method != "getAdFile" || it->content == msg.returnmsg())
-				{
-					auto ret = std::make_pair(true, std::move(it->prom));
-					_lstRequestCtx.erase(it);
-					return ret;
-				}
-	}
+	for (auto it= _lstRequestCtx.begin(); it != _lstRequestCtx.end(); it++)
+		if (it->msgID == msg.id())
+		{
+			auto ret = std::make_pair(true, std::move(it->prom));
+			_lstRequestCtx.erase(it);
+			return ret;
+		}
 
 	return std::make_pair(false, boost::promise<Message>());
 }
 
 void TcpSession::writeMsg(const Message& msg)
 {
-	_writeLen = msg.ByteSize();
-	if (_writeBuf.capacity() < 4 + _writeLen)
-	{
-		_writeBuf.reserve(4 + _writeLen);
-		_writeBuf.resize(4 + _writeLen);
-	}
-
-	int tmp = htonl(_writeLen);
-	memcpy(_writeBuf.data(), &tmp, 4);
-	msg.SerializeToArray(_writeBuf.data() + 4, _writeLen);
-
+	const int len = htonl(msg.ByteSize());
+	std::ostream ostr(&_sendBuf);
+	ostr.write((char*)&len, 4);
+	msg.SerializeToOstream(&ostr);
+	
 	auto self(shared_from_this());
-	boost::asio::async_write(_socket,
-		boost::asio::buffer(_writeBuf.data(), 4 + _writeLen),
+	boost::asio::async_write(_socket, _sendBuf,
 		[this, self](boost::system::error_code ec, std::size_t /*length*/)
 	{
 		if (!ec)
@@ -187,11 +157,19 @@ void TcpSession::writeMsg(const Message& msg)
 	});
 }
 
-void TcpSession::writeData(std::shared_ptr<std::string> data)
+void TcpSession::writeData(uint32_t msgID, boost::shared_ptr<std::string> data)
 {
+	Message msg;
+	msg.set_id(msgID);
+	int headLen = msg.ByteSize() + data->length();
+
+	std::ostream ostr(&_sendBuf);
+	ostr.write((char*)&headLen, 4);	// 长度
+	msg.SerializeToOstream(&ostr);	// Message.msgID
+	ostr << *data;					// Message其余部分
+
 	auto self(shared_from_this());
-	boost::asio::async_write(_socket,
-		boost::asio::buffer(*data),
+	boost::asio::async_write(_socket, _sendBuf,
 		[this, self, data](boost::system::error_code ec, std::size_t /*length*/)
 	{
 		if (!ec)

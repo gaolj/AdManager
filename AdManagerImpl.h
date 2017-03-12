@@ -61,13 +61,12 @@ public:
 	boost::asio::deadline_timer _timerDownload;
 
 public:
-	// 以下成员，都在唯一的广告业务线程中访问，所以不需要同步
-	AdPlayPolicy _policy;
-	std::shared_ptr<std::string> _bufPolicy;
-	std::shared_ptr<std::string> _bufAdList;
-	std::unordered_map<uint32_t, Ad> _mapAd;
-	std::unordered_map<uint32_t, std::string> _Images;		// buf for adfile
-	std::unordered_map<uint32_t, std::shared_ptr<std::string>> _bufImages;	// response msg buf 
+	boost::mutex _mutex;
+	AdPlayPolicy _policy;						// 广告策略
+	std::unordered_map<uint32_t, Ad> _mapAd;	// 广告信息
+	boost::shared_ptr<std::string> _bufPolicy;	// Policy的Message(不包含msgID)的序列化值, 为了使用boost::atomic_store，而不用std::shared_ptr
+	boost::shared_ptr<std::string> _bufAdList;	// AdList的Message(不包含msgID)的序列化值
+	std::unordered_map<uint32_t, boost::shared_ptr<std::string>> _bufImages;	// AdFile的Message(不包含msgID)的序列化值
 
 	src::severity_channel_logger<SeverityLevel> _logger;
 };

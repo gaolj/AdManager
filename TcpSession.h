@@ -4,6 +4,7 @@
 
 #include <boost/atomic.hpp>				// boost::atomic_int
 #include <boost/asio/ip/tcp.hpp>		// tcp::socket, tcp::acceptor
+#include <boost/asio/streambuf.hpp>		// boost::asio::streambuf
 #include <boost/thread/future.hpp>		// boost::shared_future, boost::promise
 #include <boost/thread/mutex.hpp>		// boost::mutex, boost::unique_lock
 #include <boost/date_time/posix_time/posix_time_types.hpp>	// boost::mutex, boost::unique_lock
@@ -34,7 +35,7 @@ public:
 	boost::future<Message> request(Message msg);	// 作为客户机发出请求
 	std::function<void(Message msg)> _requestHandler;// 处理客户端的请求
 	void writeMsg(const Message& msg);				// 发送数据
-	void writeData(std::shared_ptr<std::string> data);// 发送数据
+	void writeData(uint32_t msgID, boost::shared_ptr<std::string> data);// 发送数据
 	void handleNetError(const boost::system::error_code& ec);
 	std::function<void()> _afterNetError;
 protected:
@@ -47,10 +48,8 @@ protected:
 	std::list<RequestCtx> _lstRequestCtx;// 还没有收到回应的请求
 	std::pair<bool, boost::promise<Message>> findReqPromise(const Message& msg);
 
-	uint32_t _readLen;
-	uint32_t _writeLen;
-	std::vector<char> _readBuf;
-	std::vector<char> _writeBuf;
+	boost::asio::streambuf _recvBuf;
+	boost::asio::streambuf _sendBuf;
 	boost::asio::ip::tcp::socket _socket;
 
 	std::string _peerAddr;

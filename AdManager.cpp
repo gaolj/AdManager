@@ -4,6 +4,8 @@
 #include "TcpClient.h"
 #include "TcpServer.h"
 
+#include <boost/atomic.hpp>				// atomic_store
+#include <boost/make_shared.hpp>		// make_shared
 #include <boost/locale.hpp>				// boost::locale::conv::from_utf
 #include <boost/foreach.hpp>			// BOOST_FOREACH
 #include <boost/thread/once.hpp>		// boost::once_flag	boost::call_once
@@ -14,6 +16,8 @@
 
 using boost::once_flag;
 using boost::call_once;
+using boost::mutex;
+using boost::unique_lock;
 
 #pragma warning (disable: 4003)
 
@@ -23,9 +27,12 @@ Ad AdManager::getAd(int adId)
 	return _pimpl->_mapAd[adId];
 }
 
-std::shared_ptr<std::string> AdManager::getAdFile(int adId)
+std::string AdManager::getAdFile(int adId)
 {
-	return _pimpl->_bufImages[adId];
+	unique_lock<mutex> lck(_pimpl->_mutex);
+	Message msg;
+	msg.ParseFromString(*_pimpl->_bufImages[adId]);	// 需要测试, 取没有的广告???
+	return msg.content();
 }
 
 std::unordered_map<uint32_t, Ad> AdManager::getAdList()
@@ -122,11 +129,7 @@ void AdManager::AdManagerImpl::requestAdList()
 		msgAdList.set_returncode(0);
 		msgAdList.set_method("getAdList");
 		msgAdList.set_content(msgRsp.content());
-		std::stringstream ssAdList;
-		int len = htonl(msgAdList.ByteSize());
-		ssAdList.write((char *)&len, 4);;
-		msgAdList.SerializeToOstream(&ssAdList);
-		_bufAdList.reset(new std::string(ssAdList.str()));
+		boost::atomic_store(&_bufAdList, boost::make_shared<std::string>(msgAdList.SerializeAsString()));
 
 		for (int i = 0; i < ads.ads_size(); i++)
 		{
@@ -171,16 +174,13 @@ void AdManager::AdManagerImpl::requestAdPlayPolicy()
 	{
 		LOG_DEBUG(_logger) << "请求广告策略成功";
 		_timerPolicy.expires_from_now(boost::posix_time::hours(6));
+
 		Message msg;
 		msg.set_id(0);
 		msg.set_returncode(0);
 		msg.set_method("getAdPlayPolicy");
 		msg.set_content(msgRsp.content());
-		std::stringstream ss;
-		int len = htonl(msg.ByteSize());
-		ss.write((char *)&len, 4);;
-		msg.SerializeToOstream(&ss);
-		_bufPolicy.reset(new std::string(ss.str()));
+		boost::atomic_store(&_bufPolicy, boost::make_shared<std::string>(msg.SerializeAsString()));
 
 		requestAdList();
 	}
@@ -205,12 +205,12 @@ void AdManager::handleRequest(std::shared_ptr<TcpSession> session, Message msg)
 	if (msg.method() == "getAdPlayPolicy")
 	{
 		LOG_DEBUG(_pimpl->_logger) << "收到广告策略请求";
-		session->writeData(_pimpl->_bufPolicy);
+		session->writeData(msg.id(), boost::atomic_load(&_pimpl->_bufPolicy));
 	}
 	else if (msg.method() == "getAdList")
 	{		
-		LOG_DEBUG(_pimpl->_logger) << "收到广告列表请求";
-		session->writeData(_pimpl->_bufAdList);
+		LOG_DEBUG(_pimpl->_logger) << "收到广告列表请求";		
+		session->writeData(msg.id(), boost::atomic_load(&_pimpl->_bufAdList));
 	}
 	else if (msg.method() == "getAd")
 	{
@@ -224,15 +224,21 @@ void AdManager::handleRequest(std::shared_ptr<TcpSession> session, Message msg)
 		memcpy(&id, msg.content().c_str(), sizeof(id));
 		LOG_DEBUG(_pimpl->_logger) << "收到广告文件下载请求, id=" << id;
 
+		boost::shared_ptr<std::string> pStr;
+		unique_lock<mutex> lck(_pimpl->_mutex);
 		auto it = _pimpl->_bufImages.find(id);
-		if (it == _pimpl->_bufImages.end())
+		if (it != _pimpl->_bufImages.end())
+			pStr = it->second;
+		lck.unlock();
+
+		if (pStr)
+			session->writeData(msg.id(), it->second);
+		else
 		{
 			msg.set_returncode(ERROR_DATA_NOT_EXIST);
 			msg.set_returnmsg("no AdFile");
 			session->writeMsg(msg);
 		}
-		else
-			session->writeData(it->second);
 	}
 	else
 	{
@@ -292,13 +298,9 @@ void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 				msg.set_returncode(0);
 				msg.set_method("getAdFile");
 				msg.set_content(body);
-				msg.set_returnmsg((char *)&id, 4);
-				std::stringstream ss;
-				int len = htonl(msg.ByteSize());
-				ss.write((char *)&len, 4);;
-				msg.SerializeToOstream(&ss);
-				_bufImages.insert(std::make_pair(id, std::make_shared<std::string>(ss.str())));
-
+				unique_lock<mutex> lck(_mutex);
+				_bufImages.insert(std::make_pair(id, boost::make_shared<std::string>(msg.SerializeAsString())));
+				lck.unlock();
 
 				std::ofstream ofs(ad.filename(), std::ofstream::binary);
 				ofs << body << std::endl;
@@ -344,7 +346,14 @@ void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 			else
 			{
 				LOG_DEBUG(_logger) << "下载广告文件(" << ad.filename() << ")成功";
-				_Images.insert(std::make_pair(id, body));
+				Message msg;
+				msg.set_id(0);
+				msg.set_returncode(0);
+				msg.set_method("getAdFile");
+				msg.set_content(body);
+				unique_lock<mutex> lck(_mutex);
+				_bufImages.insert(std::make_pair(id, boost::make_shared<std::string>(msg.SerializeAsString())));
+				lck.unlock();
 			}
 		}
 		catch (const boost::exception& ex)
@@ -368,11 +377,13 @@ void AdManager::AdManagerImpl::downloadAds()
 			idSet.insert(id);
 
 	// 删除失效的内存中的广告文件
+	unique_lock<mutex> lck(_mutex);
 	for (auto it = _bufImages.begin(); it != _bufImages.end();)
 		if (idSet.find(it->first) != idSet.end())
 			it++;
 		else
 			it = _bufImages.erase(it);
+	lck.unlock();
 
 	// 下载每个广告
 	BOOST_FOREACH(auto id, idSet)					// for (auto id : idSet)
@@ -462,23 +473,15 @@ void AdManager::AdManagerImpl::initResponseBuf()
 	msgPolicy.set_id(0);
 	msgPolicy.set_returncode(ERROR_DATA_NOT_EXIST);
 	msgPolicy.set_method("getAdPlayPolicy");
-	msgPolicy.set_returnmsg("no AdPlayPolicy");
-	std::stringstream ssPolicy;
-	int len = htonl(msgPolicy.ByteSize());
-	ssPolicy.write((char *)&len, 4);;
-	msgPolicy.SerializeToOstream(&ssPolicy);
-	_bufPolicy.reset(new std::string(ssPolicy.str()));
+	msgPolicy.set_returnmsg("AdPlayPolicy not exist");
+	boost::atomic_store(&_bufPolicy, boost::make_shared<std::string>(msgPolicy.SerializeAsString()));
 
 	Message msgAdList;
 	msgAdList.set_id(0);
 	msgAdList.set_returncode(ERROR_DATA_NOT_EXIST);
 	msgAdList.set_method("getAdList");
-	msgAdList.set_returnmsg("no AdList");
-	std::stringstream ssAdList;
-	len = htonl(msgAdList.ByteSize());
-	ssAdList.write((char *)&len, 4);;
-	msgAdList.SerializeToOstream(&ssAdList);
-	_bufAdList.reset(new std::string(ssAdList.str()));
+	msgAdList.set_returnmsg("AdList not exist");
+	boost::atomic_store(&_bufAdList, boost::make_shared<std::string>(msgAdList.SerializeAsString()));
 }
 AdManager::~AdManager()
 {
