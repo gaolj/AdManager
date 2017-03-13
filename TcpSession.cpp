@@ -161,24 +161,25 @@ void TcpSession::writeData(uint32_t msgID, boost::shared_ptr<std::string> data)
 {
 	Message msg;
 	msg.set_id(msgID);
-	int headLen = msg.ByteSize() + data->length();
 
+	const int len = htonl(msg.ByteSize() + data->length());
 	std::ostream ostr(&_sendBuf);
-	ostr.write((char*)&headLen, 4);	// 长度
+	ostr.write((char*)&len, 4);		// 长度
 	msg.SerializeToOstream(&ostr);	// Message.msgID
-	ostr << *data;					// Message其余部分
 
 	auto self(shared_from_this());
 	boost::asio::async_write(_socket, _sendBuf,
+		[this, self](boost::system::error_code ec, std::size_t /*length*/)
+	{
+		if (ec)
+			handleNetError(ec);
+	});
+
+	boost::asio::async_write(_socket, boost::asio::buffer(*data),
 		[this, self, data](boost::system::error_code ec, std::size_t /*length*/)
 	{
-		if (!ec)
-		{
-		}
-		else
-		{
+		if (ec)
 			handleNetError(ec);
-		}
 	});
 }
 
