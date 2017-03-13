@@ -77,6 +77,8 @@ void TcpSession::readHead()
 		{
 			int bodyLen = ntohl(*boost::asio::buffer_cast<const int*>(_recvBuf.data()));
 			_recvBuf.consume(4);
+			if (bodyLen > 1024 * 1024 * 20)
+				LOG_WARN(_logger) << "Body so much long:" << bodyLen;
 			readBody(bodyLen);
 		}
 		else
@@ -138,6 +140,7 @@ std::pair<bool, boost::promise<Message>> TcpSession::findReqPromise(const Messag
 
 void TcpSession::writeMsg(const Message& msg)
 {
+	LOG_DEBUG(_logger) << "发出请求，msgID=" << msg.id();
 	const int len = htonl(msg.ByteSize());
 	std::ostream ostr(&_sendBuf);
 	ostr.write((char*)&len, 4);
@@ -162,21 +165,25 @@ void TcpSession::writeData(uint32_t msgID, boost::shared_ptr<std::string> data)
 	Message msg;
 	msg.set_id(msgID);
 
-	const int len = htonl(msg.ByteSize() + data->length());
+	int len = msg.ByteSize() + data->length();
+	if (len > 1024 * 1024 * 20)
+		LOG_WARN(_logger) << "Body so much long:" << len;
+	len = htonl(len);
+
 	std::ostream ostr(&_sendBuf);
 	ostr.write((char*)&len, 4);		// 长度
 	msg.SerializeToOstream(&ostr);	// Message.msgID
 
 	auto self(shared_from_this());
 	boost::asio::async_write(_socket, _sendBuf,
-		[this, self](boost::system::error_code ec, std::size_t /*length*/)
+		[this, self](boost::system::error_code ec, std::size_t length)
 	{
 		if (ec)
 			handleNetError(ec);
 	});
 
 	boost::asio::async_write(_socket, boost::asio::buffer(*data),
-		[this, self, data](boost::system::error_code ec, std::size_t /*length*/)
+		[this, self, data](boost::system::error_code ec, std::size_t length)
 	{
 		if (ec)
 			handleNetError(ec);

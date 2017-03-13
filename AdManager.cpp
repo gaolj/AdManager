@@ -204,25 +204,25 @@ void AdManager::handleRequest(std::shared_ptr<TcpSession> session, Message msg)
 {
 	if (msg.method() == "getAdPlayPolicy")
 	{
-		LOG_DEBUG(_pimpl->_logger) << "收到广告策略请求";
+		LOG_DEBUG(_pimpl->_logger) << "收到广告策略请求, msgID=" << msg.id();
 		session->writeData(msg.id(), boost::atomic_load(&_pimpl->_bufPolicy));
 	}
 	else if (msg.method() == "getAdList")
 	{		
-		LOG_DEBUG(_pimpl->_logger) << "收到广告列表请求";		
+		LOG_DEBUG(_pimpl->_logger) << "收到广告列表请求, msgID=" << msg.id();
 		session->writeData(msg.id(), boost::atomic_load(&_pimpl->_bufAdList));
 	}
 	else if (msg.method() == "getAd")
 	{
 		int id = 0;
 		memcpy(&id, msg.content().c_str(), sizeof(id));
-		LOG_DEBUG(_pimpl->_logger) << "收到广告请求, id=" << id;
+		LOG_DEBUG(_pimpl->_logger) << "收到广告请求, msgID=" << msg.id() << ", adID=" << id;
 	}
 	else if (msg.method() == "getAdFile")
 	{
 		int id = 0;
 		memcpy(&id, msg.content().c_str(), sizeof(id));
-		LOG_DEBUG(_pimpl->_logger) << "收到广告文件下载请求, id=" << id;
+		LOG_DEBUG(_pimpl->_logger) << "收到广告文件下载请求, msgID=" << msg.id() << ", adID=" << id;
 
 		boost::shared_ptr<std::string> pStr;
 		unique_lock<mutex> lck(_pimpl->_mutex);
