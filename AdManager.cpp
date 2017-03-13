@@ -222,7 +222,7 @@ void AdManager::handleRequest(std::shared_ptr<TcpSession> session, Message msg)
 	{
 		int id = 0;
 		memcpy(&id, msg.content().c_str(), sizeof(id));
-		LOG_DEBUG(_pimpl->_logger) << "收到广告文件下载请求, msgID=" << msg.id() << ", adID=" << id;
+		LOG_DEBUG(_pimpl->_logger) << "收到广告文件请求, msgID=" << msg.id() << ", adID=" << id;
 
 		boost::shared_ptr<std::string> pStr;
 		unique_lock<mutex> lck(_pimpl->_mutex);

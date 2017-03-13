@@ -2,13 +2,14 @@
 #include "Logger.h"
 #include "Message.pb.h"
 
-#include <boost/atomic.hpp>				// boost::atomic_int
+#include <boost/atomic.hpp>				// boost::atomic_bool
 #include <boost/asio/ip/tcp.hpp>		// tcp::socket, tcp::acceptor
 #include <boost/asio/streambuf.hpp>		// boost::asio::streambuf
 #include <boost/thread/future.hpp>		// boost::shared_future, boost::promise
 #include <boost/thread/mutex.hpp>		// boost::mutex, boost::unique_lock
 #include <boost/date_time/posix_time/posix_time_types.hpp>	// boost::mutex, boost::unique_lock
 #include <list>
+#include <deque>
 
 typedef std::function<void(Message msg)> requestHandler;
 
@@ -16,7 +17,7 @@ struct RequestCtx
 {
 	uint64_t msgID;
 	std::string method;
-	std::string content;
+	std::shared_ptr<std::string> wireData;
 	boost::posix_time::ptime reqTime;
 	boost::promise<Message> prom;
 };
@@ -44,12 +45,13 @@ protected:
 	void readBody(uint32_t bodyLen);	// 接收body
 
 	boost::mutex _mutex;
-	boost::atomic_int _msgID;			// 请求的消息序列号
+	uint32_t _msgID;					// 请求的消息序列号
 	std::list<RequestCtx> _lstRequestCtx;// 还没有收到回应的请求
 	std::pair<bool, boost::promise<Message>> findReqPromise(const Message& msg);
 
 	boost::asio::streambuf _recvBuf;
 	boost::asio::streambuf _sendBuf;
+	std::deque<Message> _msgQueue;
 	boost::asio::ip::tcp::socket _socket;
 
 	std::string _peerAddr;
