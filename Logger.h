@@ -41,7 +41,7 @@ enum SeverityLevel
 #define LOG_ERROR(logger)	BOOST_LOG_SEV(logger, error)
 #define LOG_FATAL(logger)	BOOST_LOG_SEV(logger, fatal)
 
-void initLogger();
+void initLogger(SeverityLevel lvl);
 
 class FuncTracer
 {

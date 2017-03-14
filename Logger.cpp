@@ -48,7 +48,7 @@ logging::formatting_ostream& operator <<
 	return strm;
 }
 
-void initLogger()
+void initLogger(SeverityLevel lvl)
 {
 	static bool inited = false;
 	if (inited == false)
@@ -70,7 +70,11 @@ void initLogger()
 	//	logging::init_from_stream(settings);
 
 #ifdef _DEBUG
-	auto console_sink = logging::add_console_log(std::clog, keywords::format = "%TimeStamp%: %Message%");
+	auto console_sink = logging::add_console_log(std::clog,
+											keywords::format = expr::stream
+												<< expr::format_date_time(_timestamp, "%Y-%m-%d %H:%M:%S.%f")
+												<< "	" << expr::attr< attrs::current_thread_id::value_type >("ThreadID")
+												<< "	" << expr::message);
 	console_sink->set_filter(_severity >= info);
 	logging::core::get()->add_sink(console_sink);
 #endif
@@ -94,7 +98,7 @@ void initLogger()
 		keywords::auto_flush = true,
 		keywords::rotation_size = 10 * 1024 * 1024,
 		keywords::time_based_rotation = sinks::file::rotation_at_time_point(0, 0, 0),
-		keywords::filter = _severity.or_default(debug) >= debug,
+		keywords::filter = _severity.or_default(debug) >= lvl,
 		keywords::format = expr::stream
 		<< expr::format_date_time(_timestamp, "%Y-%m-%d %H:%M:%S.%f")
 		<< "	" << expr::attr< attrs::current_thread_id::value_type >("ThreadID")
@@ -119,5 +123,5 @@ void initLogger()
 
 	logging::add_common_attributes();
 	logging::core::get()->add_global_attribute("Scope", attrs::named_scope());
-	logging::core::get()->set_filter(_severity >= debug);
+	logging::core::get()->set_filter(_severity >= lvl);
 }
