@@ -19,7 +19,7 @@ struct RequestCtx
 	std::string method;
 	std::shared_ptr<std::string> wireData;
 	boost::posix_time::ptime reqTime;
-	boost::promise<Message> prom;
+	std::shared_ptr<boost::promise<Message>> prom;
 };
 
 class TcpSession : public std::enable_shared_from_this<TcpSession>
@@ -35,14 +35,15 @@ public:
 
 	boost::future<Message> request(Message msg);	// 作为客户机发出请求
 	std::function<void(Message msg)> _requestHandler;// 处理客户端的请求
-	void writeMsg(const Message& msg);				// 发送数据
-	void writeData(uint32_t msgID, boost::shared_ptr<std::string> data);// 发送数据
+	void queueRspMsg(const Message& msg);			// Response msg放入队列
+	void queueRspMsg(uint32_t msgID, boost::shared_ptr<std::string> data);// Response msg放入队列
 	void handleNetError(const boost::system::error_code& ec);
 	std::function<void()> _afterNetError;
 protected:
 	void keepAlive();
 	void readHead();					// 接收head
 	void readBody(uint32_t bodyLen);	// 接收body
+	void writeData();					// 发送数据
 
 	boost::mutex _mutex;
 	uint32_t _msgID;					// 请求的消息序列号
@@ -51,8 +52,9 @@ protected:
 
 	boost::asio::streambuf _recvBuf;
 	boost::asio::streambuf _sendBuf;
-	std::deque<Message> _msgQueue;
+	std::deque<std::pair<std::string, boost::shared_ptr<std::string>>> _msgQueue;
 	boost::asio::ip::tcp::socket _socket;
+	boost::asio::io_service& _ios;
 
 	std::string _peerAddr;
 	boost::atomic_bool _isConnected;

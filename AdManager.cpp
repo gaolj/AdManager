@@ -205,12 +205,12 @@ void AdManager::handleRequest(std::shared_ptr<TcpSession> session, Message msg)
 	if (msg.method() == "getAdPlayPolicy")
 	{
 		LOG_DEBUG(_pimpl->_logger) << "收到广告策略请求, msgID=" << msg.id();
-		session->writeData(msg.id(), boost::atomic_load(&_pimpl->_bufPolicy));
+		session->queueRspMsg(msg.id(), boost::atomic_load(&_pimpl->_bufPolicy));
 	}
 	else if (msg.method() == "getAdList")
 	{		
 		LOG_DEBUG(_pimpl->_logger) << "收到广告列表请求, msgID=" << msg.id();
-		session->writeData(msg.id(), boost::atomic_load(&_pimpl->_bufAdList));
+		session->queueRspMsg(msg.id(), boost::atomic_load(&_pimpl->_bufAdList));
 	}
 	else if (msg.method() == "getAd")
 	{
@@ -232,19 +232,19 @@ void AdManager::handleRequest(std::shared_ptr<TcpSession> session, Message msg)
 		lck.unlock();
 
 		if (pStr)
-			session->writeData(msg.id(), it->second);
+			session->queueRspMsg(msg.id(), it->second);
 		else
 		{
 			msg.set_returncode(ERROR_DATA_NOT_EXIST);
-			msg.set_returnmsg("no AdFile");
-			session->writeMsg(msg);
+			msg.set_returnmsg("AdFile not exist");
+			session->queueRspMsg(msg);
 		}
 	}
 	else
 	{
 		msg.set_returncode(ERROR_METHOD_HANDLER_NOT_EXIST);
 		msg.set_returnmsg("method handler not exist");
-		session->writeMsg(msg);
+		session->queueRspMsg(msg);
 	}
 }
 
@@ -400,12 +400,12 @@ void AdManager::AdManagerImpl::downloadAds()
 		}
 }
 
-void AdManager::setConfig(const std::string& peerAddr, int peerPort, int barId, bool isBarServer, int listenPort)
+void AdManager::setConfig(const std::string& peerAddr, int peerPort, int barId, bool isBarServer, int listenPort, std::string logLvl)
 {
-	_pimpl->setConfig(peerAddr, peerPort, barId, isBarServer, listenPort);
+	_pimpl->setConfig(peerAddr, peerPort, barId, isBarServer, listenPort, logLvl);
 }
 
-void AdManager::AdManagerImpl::setConfig(const std::string& peerAddr, int peerPort, int barId, bool isBarServer, int listenPort)
+void AdManager::AdManagerImpl::setConfig(const std::string& peerAddr, int peerPort, int barId, bool isBarServer, int listenPort, const std::string& logLvl)
 {
 	using namespace boost::asio::ip;
 	_endpoint = tcp::endpoint(address::from_string(peerAddr), peerPort);
@@ -413,6 +413,17 @@ void AdManager::AdManagerImpl::setConfig(const std::string& peerAddr, int peerPo
 	_isBarServer = isBarServer;
 	_listenPort = listenPort;
 
+	SeverityLevel lvl;
+	if (logLvl == "trace") lvl = trace;
+	else if (logLvl == "debug") lvl = debug;
+	else if (logLvl == "notify") lvl = notify;
+	else if (logLvl == "info") lvl = info;
+	else if (logLvl == "warn") lvl = warn;
+	else if (logLvl == "error") lvl = error;
+	else if (logLvl == "fatal") lvl = fatal;
+	else lvl = debug;
+
+	initLogger(lvl);
 	LOG_DEBUG(_logger)
 		<< (isBarServer ? "服务端" : "客户端")
 		<< "	广告业务配置，peer地址:" << peerAddr
@@ -450,7 +461,6 @@ void AdManager::AdManagerImpl::bgnBusiness()
 AdManager::AdManager() :
 	_pimpl(new AdManagerImpl())
 {
-	initLogger();
 }
 AdManager::AdManagerImpl::AdManagerImpl() :
 	_timerPolicy(_iosBiz),
