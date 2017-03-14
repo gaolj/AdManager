@@ -17,7 +17,8 @@ public:
 		, int peerPort				// 对方端口
 		, int barId = 0				// 网吧ID
 		, bool isBarServer = false	// 是否是网吧服务端
-		, int listenPort = 0);		// 网吧服务端的监听端口
+		, int listenPort = 0		// 网吧服务端的监听端口
+		, std::string logLvl = "info");	// 日志级别
 									
 	void bgnBusiness();				// 开始广告业务
 

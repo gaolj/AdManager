@@ -22,9 +22,10 @@ public:
 	void setConfig(					// 设置参数
 		const std::string& peerAddr	// 对方地址（广告中心地址或网吧服务端地址）
 		, int peerPort				// 对方端口
-		, int barId = 0				// 网吧ID
-		, bool isBarServer = false	// 是否是网吧服务端
-		, int listenPort = 0);		// 网吧服务端的监听端口
+		, int barId					// 网吧ID
+		, bool isBarServer			// 是否是网吧服务端
+		, int listenPort			// 网吧服务端的监听端口
+		, const std::string& logLvl);// 日志级别
 
 	void bgnBusiness();				// 开始广告业务
 
