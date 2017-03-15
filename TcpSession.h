@@ -36,7 +36,7 @@ public:
 	boost::future<Message> request(Message msg);	// 作为客户机发出请求
 	std::function<void(Message msg)> _requestHandler;// 处理客户端的请求
 	void queueRspMsg(const Message& msg);			// Response msg放入队列
-	void queueRspMsg(uint32_t msgID, boost::shared_ptr<std::string> data);// Response msg放入队列
+	void queueRspMsg(uint64_t msgID, boost::shared_ptr<std::string> data);// Response msg放入队列
 	void handleNetError(const boost::system::error_code& ec);
 	std::function<void()> _afterNetError;
 protected:

@@ -211,7 +211,7 @@ void TcpSession::queueRspMsg(const Message& msg)
 	});
 }
 
-void TcpSession::queueRspMsg(uint32_t msgID, boost::shared_ptr<std::string> data)
+void TcpSession::queueRspMsg(uint64_t msgID, boost::shared_ptr<std::string> data)
 {
 	_ios.post(
 		[this, msgID, data]()
