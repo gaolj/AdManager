@@ -7,7 +7,8 @@
 
 本静态库实现了一个高性能、高并发的TCP Server，支持万级规模的并发TCP长连接及业务处理，具体特性如下：
 
-	低资源消耗：非常低的CPU和内存占用。服务端内存只消耗在广告文件的缓存和每个TCP连接所需要用到的socket句柄所占用的windows核心内存
+	低资源消耗：	非常低的CPU和内存占用。
+				服务端内存只消耗在广告文件的缓存和每个TCP连接所需要用到的socket句柄所占用的windows核心内存
 
 	网络连接：网吧服务端和广告中心，网吧客户端和网吧服务端，都采用TCP长连接。
 
@@ -35,31 +36,46 @@
 
 
 三、类和接口说明：
-	AdManager：		对外接口类，封装了所有网吧服务端和客户端的广告业务（除了网吧客户端的播放功能），负责接收广告播放策略和广告文件。
-	AdManagerImpl：	AdManager的实现封装，对AdManager的声明和实现的分离，使外部程序使用此lib库时，不依赖内部头文件。
-	TcpSession：		代表一个TCP连接，负责网络读写数据
-	TcpClient:		代表一个TCP连接的客户端，负责发起同步或异步连接和连接断掉后的自动重连
-	TcpServer：		代表一个TCP服务端，负责监听、接收TcpClient的连接请求，管理所有当前有效的TCP连接
+	AdManager：		对外接口类
+					封装了所有网吧服务端和客户端的广告业务（除了网吧客户端的播放功能）
+					负责接收广告播放策略和广告文件
+
+	AdManagerImpl：	AdManager的实现封装
+					对AdManager的声明和实现的分离
+					使外部程序使用此lib库时，不依赖内部头文件
+
+	TcpSession：		代表一个TCP连接
+					负责网络读写数据
+
+	TcpClient:		代表一个TCP连接的客户端
+					负责发起同步或异步连接和连接断掉后的自动重连
+
+	TcpServer：		代表一个TCP服务端
+					负责监听、接收TcpClient的连接请求，管理所有当前有效的TCP连接
 
 
 四、使用说明
 
 	AdManager类通过setConfig设置后，可同时用在网吧服务端或网吧客户端。
 
-	服务端或客户端调用setConfig后，再调用bgnBusiness即可，广告及策略的下载处理都在AdManager内部完成，对外部模块透明。
+	服务端或客户端调用setConfig后，再调用bgnBusiness即可，
+	广告及策略的下载处理都在AdManager内部完成，对外部模块透明。
 
-	客户端需要播放广告时，通过getAdPlayPolicy得到播放策略，以及getAd、getAdFile得到广告信息和广告文件，然后完成播放。
+	客户端需要播放广告时，通过getAdPlayPolicy得到播放策略，
+	以及getAd、getAdFile得到广告信息和广告文件，然后完成播放。
 
 
 五、代码示例
 
 服务端：
 	AdManager& adManager = AdManager::getInstance();
-	adManager.setConfig("139.224.61.179", 8888, 123456, true, 18888);	// 参数依次为：中心ip，中心端口，网吧ID，是否是服务端，服务端监听端口
+	// 参数依次为：中心ip，中心端口，网吧ID，是否是服务端，服务端监听端口
+	adManager.setConfig("139.224.61.179", 8888, 123456, true, 18888);
 	adManager.bgnBusiness();
 
 客户端：
 	AdManager& adManager = AdManager::getInstance();
-	adManager.setConfig("192.168.0.111", 18888, 123456, false);			// 参数依次为：服务端ip，服务端端口，网吧ID，是否是服务端
+	// 参数依次为：服务端ip，服务端端口，网吧ID，是否是服务端
+	adManager.setConfig("192.168.0.111", 18888, 123456, false);
 	adManager.bgnBusiness();
 
