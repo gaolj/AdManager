@@ -2,10 +2,15 @@
 #include <string>
 #include <memory>
 #include <unordered_map>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 #include "Message.pb.h"
 #include "AdPlayPolicy.pb.h"
 
+const unsigned int WM_APP_ADFILE_DOWNLOADED = 0x8000 + 1001;	// 广告文件下载成功消息通知
+
+class CPlayer;
 class TcpSession;
 class AdManager
 {
@@ -19,6 +24,8 @@ public:
 		, bool isBarServer = false	// 是否是网吧服务端
 		, int listenPort = 0		// 网吧服务端的监听端口
 		, std::string logLvl = "info");	// 日志级别
+
+	//CPlayer* setVideoWnd(HWND hwnd);// 设置锁屏（视频）窗口句柄
 									
 	void bgnBusiness();				// 开始广告业务
 

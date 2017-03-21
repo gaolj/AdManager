@@ -3,6 +3,7 @@
 #include "TcpSession.h"
 #include "TcpClient.h"
 #include "TcpServer.h"
+#include "Player.h"
 
 #include <boost/atomic.hpp>				// atomic_store
 #include <boost/make_shared.hpp>		// make_shared
@@ -30,9 +31,8 @@ Ad AdManager::getAd(int adId)
 std::string AdManager::getAdFile(int adId)
 {
 	unique_lock<mutex> lck(_pimpl->_mutex);
-	Message msg;
-	msg.ParseFromString(*_pimpl->_bufImages[adId]);	// 需要测试, 取没有的广告???
-	return msg.content();
+	auto a = *_pimpl->_bufImages[adId];
+	return a;
 }
 
 std::unordered_map<uint32_t, Ad> AdManager::getAdList()
@@ -137,6 +137,11 @@ void AdManager::AdManagerImpl::requestAdList()
 			utf8ToGB2312(ad);
 			_mapAd.insert(std::make_pair(ad.id(), ad));
 		}
+
+		//BOOST_FOREACH(auto& adplay, _policy.adplays())
+		//	if (adplay.location() == 1)	// 广告位：锁屏-1
+		//		BOOST_FOREACH(auto id, adplay.adids())
+		//			_lockAds.insert(id);
 
 		downloadAds();
 	}
@@ -346,14 +351,19 @@ void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 			else
 			{
 				LOG_DEBUG(_logger) << "下载广告文件(" << ad.filename() << ")成功";
-				Message msg;
-				msg.set_id(0);
-				msg.set_returncode(0);
-				msg.set_method("getAdFile");
-				msg.set_content(body);
 				unique_lock<mutex> lck(_mutex);
-				_bufImages.insert(std::make_pair(id, boost::make_shared<std::string>(msg.SerializeAsString())));
+				_bufImages.insert(std::make_pair(id, boost::make_shared<std::string>(body)));
 				lck.unlock();
+
+				//if (_lockAds.find(id) != _lockAds.end())
+				//{
+				//	std::string name = _mapAd[id].filename();
+				//	size_t size = name.length();
+				//	wchar_t buffer[2046] = {0};
+				//	MultiByteToWideChar(CP_ACP, 0, name.c_str(), size, buffer, size * sizeof(wchar_t));
+				//	buffer[size] = 0;
+				//	_pPlayer->OpenMem(buffer, (BYTE*)_bufImages[id]->c_str(), _bufImages[id]->length());
+				//}
 			}
 		}
 		catch (const boost::exception& ex)
@@ -404,6 +414,13 @@ void AdManager::setConfig(const std::string& peerAddr, int peerPort, int barId, 
 {
 	_pimpl->setConfig(peerAddr, peerPort, barId, isBarServer, listenPort, logLvl);
 }
+
+//CPlayer* AdManager::setVideoWnd(HWND hwnd)
+//{
+//	HRESULT hr = CPlayer::CreateInstance(hwnd, hwnd, &_pimpl->_pPlayer);
+//	_pimpl->_hwnd = hwnd;
+//	return _pimpl->_pPlayer;
+//}
 
 void AdManager::AdManagerImpl::setConfig(const std::string& peerAddr, int peerPort, int barId, bool isBarServer, int listenPort, const std::string& logLvl)
 {

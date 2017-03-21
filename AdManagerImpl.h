@@ -11,6 +11,7 @@ void gb2312ToUTF8(Message& msg);
 void utf8ToGB2312(Message& msg);
 Ad&  utf8ToGB2312(Ad& ad);
 
+class CPlayer;
 class TcpClient;
 class TcpServer;
 class AdManager::AdManagerImpl
@@ -42,6 +43,8 @@ public:
 	void downloadAd(uint32_t id);
 
 public:
+	CPlayer *_pPlayer;
+	HWND _hwnd;
 	int _barId;
 	int _listenPort;
 	bool _isBarServer;
@@ -65,6 +68,7 @@ public:
 	boost::mutex _mutex;
 	AdPlayPolicy _policy;						// 广告策略
 	std::unordered_map<uint32_t, Ad> _mapAd;	// 广告信息
+	std::set<uint32_t> _lockAds;
 	boost::shared_ptr<std::string> _bufPolicy;	// Policy的Message(不包含msgID)的序列化值, 为了使用boost::atomic_store，而不用std::shared_ptr
 	boost::shared_ptr<std::string> _bufAdList;	// AdList的Message(不包含msgID)的序列化值
 	std::unordered_map<uint32_t, boost::shared_ptr<std::string>> _bufImages;	// AdFile的Message(不包含msgID)的序列化值
