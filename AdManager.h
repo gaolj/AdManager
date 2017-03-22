@@ -8,7 +8,8 @@
 #include "Message.pb.h"
 #include "AdPlayPolicy.pb.h"
 
-const unsigned int WM_APP_ADFILE_DOWNLOADED = 0x8000 + 1001;	// 广告文件下载成功消息通知
+const unsigned int WM_APP_PLAYER_EVENT = WM_APP + 1000;
+const unsigned int WM_APP_ADFILE_DOWNLOADED = WM_APP + 1001;	// 广告文件下载成功消息通知
 
 class CPlayer;
 class TcpSession;
@@ -25,7 +26,7 @@ public:
 		, int listenPort = 0		// 网吧服务端的监听端口
 		, std::string logLvl = "info");	// 日志级别
 
-	//CPlayer* setVideoWnd(HWND hwnd);// 设置锁屏（视频）窗口句柄
+	CPlayer* setVideoWnd(HWND hwnd);// 设置锁屏（视频）窗口句柄
 									
 	void bgnBusiness();				// 开始广告业务
 
@@ -33,7 +34,7 @@ public:
 
 	Ad getAd(int adId);				// 单个广告信息
 
-	std::string getAdFile(int adId);// 单个广告文件
+	std::shared_ptr<std::string> getAdFile(int adId);// 单个广告文件
 
 	AdPlayPolicy getAdPlayPolicy();	// 广告播放策略
 

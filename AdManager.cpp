@@ -28,11 +28,12 @@ Ad AdManager::getAd(int adId)
 	return _pimpl->_mapAd[adId];
 }
 
-std::string AdManager::getAdFile(int adId)
+std::shared_ptr<std::string> AdManager::getAdFile(int adId)
 {
 	unique_lock<mutex> lck(_pimpl->_mutex);
-	auto a = *_pimpl->_bufImages[adId];
-	return a;
+
+	std::string str = *_pimpl->_bufImages[adId];	// 如果_pimpl->_bufImages[adId]为NULL, 要测试???
+	return std::make_shared<std::string>(str);
 }
 
 std::unordered_map<uint32_t, Ad> AdManager::getAdList()
@@ -138,10 +139,16 @@ void AdManager::AdManagerImpl::requestAdList()
 			_mapAd.insert(std::make_pair(ad.id(), ad));
 		}
 
-		//BOOST_FOREACH(auto& adplay, _policy.adplays())
-		//	if (adplay.location() == 1)	// 广告位：锁屏-1
-		//		BOOST_FOREACH(auto id, adplay.adids())
-		//			_lockAds.insert(id);
+		BOOST_FOREACH(auto& adplay, _policy.adplays())
+			if (adplay.location() == 1)	// 广告位：锁屏-1
+				BOOST_FOREACH(auto id, adplay.adids())
+				{
+					_lockAds.insert(id);
+					PlayItem item;
+					item.id = id;
+					item.filename = _mapAd[id].filename();
+					_pPlayer->_playList.push_back(item);
+				}
 
 		downloadAds();
 	}
@@ -355,15 +362,16 @@ void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 				_bufImages.insert(std::make_pair(id, boost::make_shared<std::string>(body)));
 				lck.unlock();
 
-				//if (_lockAds.find(id) != _lockAds.end())
-				//{
-				//	std::string name = _mapAd[id].filename();
-				//	size_t size = name.length();
-				//	wchar_t buffer[2046] = {0};
-				//	MultiByteToWideChar(CP_ACP, 0, name.c_str(), size, buffer, size * sizeof(wchar_t));
-				//	buffer[size] = 0;
-				//	_pPlayer->OpenMem(buffer, (BYTE*)_bufImages[id]->c_str(), _bufImages[id]->length());
-				//}
+				if (_lockAds.find(id) != _lockAds.end())
+				{
+					_pPlayer->UpdatePlayList(id, std::make_shared<std::string>(std::move(body)));
+					static bool first = false;
+					if (!first)
+					{
+						first = true;
+						_pPlayer->NotifyPlay();
+					}
+				}
 			}
 		}
 		catch (const boost::exception& ex)
@@ -415,12 +423,12 @@ void AdManager::setConfig(const std::string& peerAddr, int peerPort, int barId, 
 	_pimpl->setConfig(peerAddr, peerPort, barId, isBarServer, listenPort, logLvl);
 }
 
-//CPlayer* AdManager::setVideoWnd(HWND hwnd)
-//{
-//	HRESULT hr = CPlayer::CreateInstance(hwnd, hwnd, &_pimpl->_pPlayer);
-//	_pimpl->_hwnd = hwnd;
-//	return _pimpl->_pPlayer;
-//}
+CPlayer* AdManager::setVideoWnd(HWND hwnd)
+{
+	HRESULT hr = CPlayer::CreateInstance(hwnd, hwnd, &_pimpl->_pPlayer);
+	_pimpl->_hwnd = hwnd;
+	return _pimpl->_pPlayer;
+}
 
 void AdManager::AdManagerImpl::setConfig(const std::string& peerAddr, int peerPort, int barId, bool isBarServer, int listenPort, const std::string& logLvl)
 {
