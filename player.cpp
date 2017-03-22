@@ -78,8 +78,10 @@ HRESULT CPlayer::Initialize()
         if (m_hCloseEvent == NULL)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
+			return hr;
         }
     }
+	hr = CreateSession();
     return hr;
 }
 
@@ -147,18 +149,21 @@ HRESULT CPlayer::OpenMem(std::string name, const BYTE *pBuf, const int len)
 	IMFByteStream *pByteStream = NULL;
 	IMFTopology *pTopology = NULL;
 	IMFPresentationDescriptor* pSourcePD = NULL;
+	IMFMediaSource *pSourceTmp = NULL;
+
+	if (m_pSource)
+		pSourceTmp = m_pSource;
 
 	size_t size = name.length();
 	wchar_t pwszFileName[2046] = { 0 };
 	MultiByteToWideChar(CP_ACP, 0, name.c_str(), size, pwszFileName, size * sizeof(wchar_t));
 	pwszFileName[size] = 0;
 
-	HRESULT hr = CreateSession();
-	CHECK_HR(hr);
-
+	HRESULT hr = S_OK;
 	pStream = SHCreateMemStream(pBuf, len);
 	if (!pStream)
-		goto done;
+		hr = -1;
+	CHECK_HR(hr);
 
 	hr = MFCreateMFByteStreamOnStream(pStream, &pByteStream);
 	CHECK_HR(hr);
@@ -175,6 +180,12 @@ HRESULT CPlayer::OpenMem(std::string name, const BYTE *pBuf, const int len)
 	hr = m_pSession->SetTopology(0, pTopology);
 	CHECK_HR(hr);
 
+	// 释放之前播放过的资源
+	if (pSourceTmp)
+	{
+		hr = pSourceTmp->Shutdown();
+		CHECK_HR(hr);
+	}
 	m_state = OpenPending;
 
 done:
@@ -185,6 +196,7 @@ done:
 	SafeRelease(&pByteStream);
 	SafeRelease(&pSourcePD);
 	SafeRelease(&pTopology);
+	SafeRelease(&pSourceTmp);
 	return hr;
 }
 
@@ -421,22 +433,37 @@ HRESULT CPlayer::Shutdown()
 
 HRESULT CPlayer::OnTopologyStatus(IMFMediaEvent *pEvent)
 {
+	HRESULT hr = S_OK;
+
+	//TOPOID TopoID;
+	//IMFTopology *pTopology = NULL;
+	//hr = GetEventObject(pEvent, &pTopology);
+	//CHECK_HR(hr);
+	//hr = pTopology->GetTopologyID(&TopoID);
+	//CHECK_HR(hr);
+
     UINT32 status; 
+    hr = pEvent->GetUINT32(MF_EVENT_TOPOLOGY_STATUS, &status);
+	CHECK_HR(hr);
 
-    HRESULT hr = pEvent->GetUINT32(MF_EVENT_TOPOLOGY_STATUS, &status);
-    if (SUCCEEDED(hr) && (status == MF_TOPOSTATUS_READY))
-    {
-        SafeRelease(&m_pVideoDisplay);
+	switch (status)
+	{
+	case MF_TOPOSTATUS_READY:
+		SafeRelease(&m_pVideoDisplay);
+		MFGetService(m_pSession, MR_VIDEO_RENDER_SERVICE, IID_PPV_ARGS(&m_pVideoDisplay));
+		hr = StartPlayback();
+		CHECK_HR(hr);
+		break;
 
-        // Get the IMFVideoDisplayControl interface from EVR. This call is
-        // expected to fail if the media file does not have a video stream.
+	case MF_TOPOSTATUS_ENDED:
+		hr = m_pSession->SetTopology(MFSESSION_SETTOPOLOGY_CLEAR_CURRENT, NULL);
+		CHECK_HR(hr);
+		break;
+	}
 
-        (void)MFGetService(m_pSession, MR_VIDEO_RENDER_SERVICE, 
-            IID_PPV_ARGS(&m_pVideoDisplay));
-
-        hr = StartPlayback();
-    }
-    return hr;
+done:
+	//SafeRelease(&pTopology);
+	return hr;
 }
 
 
@@ -556,10 +583,6 @@ HRESULT CPlayer::StartPlayback()
     HRESULT hr = m_pSession->Start(&GUID_NULL, &varStart);
     if (SUCCEEDED(hr))
     {
-        // Note: Start is an asynchronous operation. However, we
-        // can treat our state as being already started. If Start
-        // fails later, we'll get an MESessionStarted event with
-        // an error code, and we will update our state then.
         m_state = Started;
     }
     PropVariantClear(&varStart);
