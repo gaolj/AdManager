@@ -145,7 +145,7 @@ ULONG CPlayer::Release()
 
 HRESULT CPlayer::OpenMem(std::string name, const BYTE *pBuf, const int len)
 {
-	IStream* pStream = NULL;
+	IStream* pMemStream = NULL;
 	IMFByteStream *pByteStream = NULL;
 	IMFTopology *pTopology = NULL;
 	IMFPresentationDescriptor* pSourcePD = NULL;
@@ -160,12 +160,12 @@ HRESULT CPlayer::OpenMem(std::string name, const BYTE *pBuf, const int len)
 	pwszFileName[size] = 0;
 
 	HRESULT hr = S_OK;
-	pStream = SHCreateMemStream(pBuf, len);
-	if (!pStream)
+	pMemStream = SHCreateMemStream(pBuf, len);
+	if (!pMemStream)
 		hr = -1;
 	CHECK_HR(hr);
 
-	hr = MFCreateMFByteStreamOnStream(pStream, &pByteStream);
+	hr = MFCreateMFByteStreamOnStream(pMemStream, &pByteStream);
 	CHECK_HR(hr);
 
 	hr = CreateMediaSource(pwszFileName, pByteStream, &m_pSource);
@@ -192,7 +192,7 @@ done:
 	if (FAILED(hr))
 		m_state = Closed;
 
-	SafeRelease(&pStream);
+	SafeRelease(&pMemStream);
 	SafeRelease(&pByteStream);
 	SafeRelease(&pSourcePD);
 	SafeRelease(&pTopology);
@@ -397,7 +397,7 @@ HRESULT CPlayer::HandleEvent(UINT_PTR pEventPtr)
         break;
 
 	case MESessionEnded:
-		::Sleep(100);
+		::Sleep(1000);
 		NotifyPlay();
 		break;
 
@@ -434,13 +434,15 @@ HRESULT CPlayer::Shutdown()
 HRESULT CPlayer::OnTopologyStatus(IMFMediaEvent *pEvent)
 {
 	HRESULT hr = S_OK;
+	TOPOID TopoID = 0;
+	IMFTopology *pTopology = NULL;
+	IMFTopology *pFullTopo1 = NULL;
+	IMFTopology *pFullTopo2 = NULL;
 
-	//TOPOID TopoID;
-	//IMFTopology *pTopology = NULL;
-	//hr = GetEventObject(pEvent, &pTopology);
-	//CHECK_HR(hr);
-	//hr = pTopology->GetTopologyID(&TopoID);
-	//CHECK_HR(hr);
+	hr = GetEventObject(pEvent, &pTopology);
+	CHECK_HR(hr);
+	hr = pTopology->GetTopologyID(&TopoID);
+	CHECK_HR(hr);
 
     UINT32 status; 
     hr = pEvent->GetUINT32(MF_EVENT_TOPOLOGY_STATUS, &status);
@@ -456,13 +458,17 @@ HRESULT CPlayer::OnTopologyStatus(IMFMediaEvent *pEvent)
 		break;
 
 	case MF_TOPOSTATUS_ENDED:
+		//hr = m_pSession->GetFullTopology(MFSESSION_SETTOPOLOGY_CLEAR_CURRENT, NULL, &pFullTopo1);
+		hr = m_pSession->GetFullTopology(0, TopoID, &pFullTopo2);
 		hr = m_pSession->SetTopology(MFSESSION_SETTOPOLOGY_CLEAR_CURRENT, NULL);
 		CHECK_HR(hr);
 		break;
 	}
 
 done:
-	//SafeRelease(&pTopology);
+	SafeRelease(&pTopology);
+	SafeRelease(&pFullTopo1);
+	SafeRelease(&pFullTopo2);
 	return hr;
 }
 
