@@ -169,8 +169,11 @@ void AdManager::AdManagerImpl::requestAdList()
 }
 
 
-void AdManager::AdManagerImpl::requestAdPlayPolicy()
+void AdManager::AdManagerImpl::requestAdPlayPolicy(const boost::system::error_code& ec)
 {
+	if (ec == boost::asio::error::operation_aborted)
+		return;
+
 	Message msgReq;
 	msgReq.set_method("getAdPlayPolicy");
 
@@ -206,7 +209,7 @@ void AdManager::AdManagerImpl::requestAdPlayPolicy()
 			LOG_DEBUG(_logger) << "请求广告策略失败, content解析失败";
 	}
 
-	_timerPolicy.async_wait(boost::bind(&AdManager::AdManagerImpl::requestAdPlayPolicy, this));
+	_timerPolicy.async_wait(boost::bind(&AdManager::AdManagerImpl::requestAdPlayPolicy, this, _1));
 }
 #include <sstream>      // std::stringstream
 #define ERROR_METHOD_HANDLER_NOT_EXIST	(1)
@@ -365,12 +368,7 @@ void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 				if (_lockAds.find(id) != _lockAds.end())
 				{
 					_pPlayer->UpdatePlayList(id, std::make_shared<std::string>(std::move(body)));
-					static bool first = false;
-					if (!first)
-					{
-						first = true;
-						_pPlayer->NotifyPlay();
-					}
+					_pPlayer->SetMediaSourceReady(true);
 				}
 			}
 		}
@@ -483,7 +481,7 @@ void AdManager::AdManagerImpl::bgnBusiness()
 		while (!_tcpClient->syncConnect(_endpoint))
 			boost::this_thread::sleep(boost::posix_time::minutes(5));
 
-		requestAdPlayPolicy();
+		requestAdPlayPolicy(boost::system::error_code());
 	});
 
 }
@@ -538,10 +536,22 @@ void AdManager::endBusiness()
 }
 void AdManager::AdManagerImpl::endBusiness()
 {
-	_iosNet.stop();
-	_iosBiz.stop();
+	_timerPolicy.cancel();
+
 	if (_tcpClient)
 		_tcpClient->stop();
 	if (_tcpServer)
 		_tcpServer->stop();
+
+	_iosNet.stop();
+	_iosBiz.stop();
+	_threadNet.join();
+	_threadBiz.join();
+
+	if (_pPlayer)
+	{
+		_pPlayer->Shutdown();
+		if (0 == _pPlayer->Release())
+			_pPlayer = NULL;
+	}
 }

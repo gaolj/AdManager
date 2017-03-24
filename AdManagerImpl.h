@@ -38,7 +38,7 @@ public:
 	// 向广告中心请求数据
 	bool requestAd(int adId);
 	void requestAdList();
-	void requestAdPlayPolicy();
+	void requestAdPlayPolicy(const boost::system::error_code& ec);
 	void downloadAds();
 	void downloadAd(uint32_t id);
 

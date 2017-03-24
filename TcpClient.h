@@ -9,7 +9,7 @@ public:
 	virtual ~TcpClient();
 
 	bool syncConnect(const boost::asio::ip::tcp::endpoint& endpoint);
-	void asyncConnect(const boost::asio::ip::tcp::endpoint& endpoint);
+	void asyncConnect(const boost::asio::ip::tcp::endpoint& endpoint, const boost::system::error_code& ec);
 
 	SessionPtr session();
 	void setAutoReconnect(bool autoReconnect);
@@ -45,6 +45,6 @@ inline void TcpClient::setAutoReconnect(bool autoReconnect)
 	if (!autoReconnect)
 		_session->_afterNetError = NULL;
 	else
-		_session->_afterNetError = [this]() {asyncConnect(_endpoint);};
+		_session->_afterNetError = [this]() {asyncConnect(_endpoint, boost::system::error_code());};
 }
 

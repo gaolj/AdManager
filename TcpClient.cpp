@@ -7,12 +7,13 @@ TcpClient::TcpClient(boost::asio::io_service& ios):
 	_logger(keywords::channel = "net")
 {
 	_session->_afterNetError = [this](){
-		this->asyncConnect(_endpoint);
+		this->asyncConnect(_endpoint, boost::system::error_code());
 	};
 }
 
 TcpClient::~TcpClient()
 {
+	//_reconnectTimer.cancel();
 	_session->stopSession();
 }
 
@@ -33,8 +34,11 @@ bool TcpClient::syncConnect(const boost::asio::ip::tcp::endpoint& endpoint)
 	}
 }
 
-void TcpClient::asyncConnect(const boost::asio::ip::tcp::endpoint& endpoint)
+void TcpClient::asyncConnect(const boost::asio::ip::tcp::endpoint& endpoint, const boost::system::error_code& ec)
 {
+	if (ec == boost::asio::error::operation_aborted)
+		return;
+
 	_endpoint = endpoint;
 	if (_reconnectInterval < 10 * 60)
 		_reconnectInterval *= 2;
@@ -56,7 +60,7 @@ void TcpClient::asyncConnect(const boost::asio::ip::tcp::endpoint& endpoint)
 				boost::posix_time::seconds(_reconnectInterval));
 
 			_reconnectTimer.async_wait(
-				boost::bind(&TcpClient::asyncConnect, this, _endpoint));
+				boost::bind(&TcpClient::asyncConnect, this, _endpoint, _1));
 		}
 	});
 }
