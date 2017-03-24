@@ -4,6 +4,7 @@
 #include <boost/log/sources/record_ostream.hpp>				// BOOST_LOG_SEV
 #include <boost/log/sources/severity_logger.hpp>			// severity_logger
 #include <boost/log/sources/severity_channel_logger.hpp>	// severity_channel_logger
+#include <boost/log/sources/global_logger_storage.hpp>
 
 //#include <boost/log/attributes.hpp>						
 #include <boost/log/attributes/named_scope.hpp>				// BOOST_LOG_NAMED_SCOPE
@@ -42,19 +43,28 @@ enum SeverityLevel
 #define LOG_FATAL(logger)	BOOST_LOG_SEV(logger, fatal)
 
 void initLogger(SeverityLevel lvl);
+BOOST_LOG_GLOBAL_LOGGER(tracer_logger, src::severity_logger_mt<SeverityLevel>)
+BOOST_LOG_GLOBAL_LOGGER(player_logger, src::severity_channel_logger_mt<SeverityLevel>)
 
 class FuncTracer
 {
 public:
-	src::severity_logger<SeverityLevel> _logger;
-	FuncTracer()
+	std::string _msg;
+	FuncTracer(const std::string& msg) : _msg(msg)
 	{
-		LOG_TRACE(_logger) << "BGN";
+		LOG_TRACE(tracer_logger::get()) << "BGN	" << _msg;
 	}
 
 	~FuncTracer(void)
 	{
-		LOG_TRACE(_logger) << "END";
+		LOG_TRACE(tracer_logger::get()) << "END	" << _msg;
 	}
 };
+
+#ifdef _DEBUG
+#define FUNC_TRACER(msg)	FuncTracer tracer(msg)
+#else
+// #define FUNC_TRACER(msg)	// 性能原因
+#define FUNC_TRACER(msg)	FuncTracer tracer(msg)
+#endif
 

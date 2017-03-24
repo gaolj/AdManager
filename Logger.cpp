@@ -125,3 +125,9 @@ void initLogger(SeverityLevel lvl)
 	logging::core::get()->add_global_attribute("Scope", attrs::named_scope());
 	logging::core::get()->set_filter(_severity >= lvl);
 }
+
+BOOST_LOG_GLOBAL_LOGGER_CTOR_ARGS(
+	tracer_logger,
+	src::severity_logger_mt<SeverityLevel>,
+	(keywords::severity = trace))
+

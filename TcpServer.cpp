@@ -41,7 +41,6 @@ void TcpServer::doAccept()
 		[this, session](boost::system::error_code ec)
 	{
 		BOOST_LOG_NAMED_SCOPE("handleAccept");
-		FuncTracer tracer;
 
 		if (!ec)
 		{
