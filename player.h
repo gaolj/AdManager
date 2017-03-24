@@ -51,6 +51,7 @@ public:
 	void UpdatePlayList(uint32_t id, std::shared_ptr<std::string> adfile);
 	void NotifyPlay();
 	void SetVideoWindow(HWND hVideo);
+	void SetMediaSourceReady(bool isReady);
 
 	static HRESULT CreateInstance(HWND hVideo, HWND hEvent, CPlayer **ppPlayer);
 

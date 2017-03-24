@@ -1,6 +1,7 @@
 #include "Player.h"
 #include "Logger.h"
 #include <assert.h>
+#include <boost/atomic.hpp>				// boost::atomic_bool
 
 #pragma comment(lib, "mf.lib")
 #pragma comment(lib, "mfplat.lib")
@@ -101,7 +102,6 @@ HRESULT CPlayer::Initialize()
 			return hr;
         }
     }
-	hr = CreateSession();
     return hr;
 }
 
@@ -166,8 +166,6 @@ ULONG CPlayer::Release()
 HRESULT CPlayer::OpenMem(std::string name, const BYTE *pBuf, const int len)
 {
 	FUNC_TRACER("CPlayer::OpenMem");
-	while (!m_hwndVideo || !m_hwndEvent)
-		::Sleep(1000);
 
 	IStream* pMemStream = NULL;
 	IMFByteStream *pByteStream = NULL;
@@ -222,48 +220,6 @@ done:
 	SafeRelease(&pTopology);
 	SafeRelease(&pSourceTmp);
 	return hr;
-}
-
-//  Open a URL for playback.
-HRESULT CPlayer::OpenURL(const WCHAR *sURL)
-{
-	IMFTopology *pTopology = NULL;
-    IMFPresentationDescriptor* pSourcePD = NULL;
-
-    // Create the media session.
-    HRESULT hr = CreateSession();
-	CHECK_HR(hr);
-
-    // Create the media source.
-    hr = CreateMediaSource(sURL, &m_pSource);
-	CHECK_HR(hr);
-
-    // Create the presentation descriptor for the media source.
-    hr = m_pSource->CreatePresentationDescriptor(&pSourcePD);
-	CHECK_HR(hr);
-
-    // Create a partial topology.
-    hr = CreatePlaybackTopology(m_pSource, pSourcePD, m_hwndVideo, &pTopology);
-	CHECK_HR(hr);
-
-    // Set the topology on the media session.
-    hr = m_pSession->SetTopology(0, pTopology);
-	CHECK_HR(hr);
-
-    m_state = OpenPending;
-
-    // If SetTopology succeeds, the media session will queue an 
-    // MESessionTopologySet event.
-
-done:
-    if (FAILED(hr))
-    {
-        m_state = Closed;
-    }
-
-    SafeRelease(&pSourcePD);
-    SafeRelease(&pTopology);
-    return hr;
 }
 
 //  Pause playback.
@@ -944,8 +900,27 @@ void CPlayer::NotifyPlay()
 	}
 }
 
+static boost::atomic_bool ready(false);
 void CPlayer::SetVideoWindow(HWND hVideo)
 {
 	m_hwndVideo = hVideo;
 	m_hwndEvent = hVideo;
+
+	HRESULT hr = CreateSession();
+	for (int i = 0; i < 30; i++)
+		if (ready)
+		{
+			NotifyPlay();
+			break;
+		}
+		else
+		{
+			::Sleep(100);
+		}
 }
+
+void CPlayer::SetMediaSourceReady(bool isReady)
+{
+	ready = isReady;
+}
+
