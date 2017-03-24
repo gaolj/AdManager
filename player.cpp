@@ -1,13 +1,27 @@
 #include "Player.h"
+#include "Logger.h"
 #include <assert.h>
 
-//#pragma comment(lib, "shlwapi")
 #pragma comment(lib, "mf.lib")
 #pragma comment(lib, "mfplat.lib")
 #pragma comment(lib, "mfuuid.lib")
 #pragma comment(lib, "strmiids.lib")
 
 const UINT WM_APP_PLAYER_EVENT = WM_APP + 1000;
+
+BOOST_LOG_GLOBAL_LOGGER_CTOR_ARGS(
+	player_logger,
+	src::severity_channel_logger_mt<SeverityLevel>,
+	(keywords::channel = "player"))
+	src::severity_channel_logger_mt<SeverityLevel>& logger = player_logger::get();
+
+#define CHECK_HR(hr)			\
+	if (FAILED(hr))				\
+	{							\
+		BOOST_LOG_FUNCTION();	\
+		LOG_ERROR(logger) << std::showbase << std::uppercase << std::hex << hr << std::noshowbase << std::nouppercase << std::dec; \
+		goto done;				\
+	}
 
 template <class Q>
 HRESULT GetEventObject(IMFMediaEvent *pEvent, Q **ppObject)
@@ -45,14 +59,18 @@ HRESULT CPlayer::CreateInstance(
     HWND hEvent,                  // Window to receive notifications.
     CPlayer **ppPlayer)           // Receives a pointer to the CPlayer object.
 {
-    if (ppPlayer == NULL)
+	BOOST_LOG_FUNCTION();
+	FUNC_TRACER("CPlayer::CreateInstance");
+	if (ppPlayer == NULL)
     {
+		LOG_ERROR(logger) << "E_POINTER";
         return E_POINTER;
     }
 
     CPlayer *pPlayer = new (std::nothrow) CPlayer(hVideo, hEvent);
     if (pPlayer == NULL)
     {
+		LOG_ERROR(logger) << "E_OUTOFMEMORY";
         return E_OUTOFMEMORY;
     }
 
@@ -63,7 +81,8 @@ HRESULT CPlayer::CreateInstance(
     }
     else
     {
-        pPlayer->Release();
+		LOG_ERROR(logger) << "Player->Initialize";
+		pPlayer->Release();
     }
     return hr;
 }
@@ -78,6 +97,7 @@ HRESULT CPlayer::Initialize()
         if (m_hCloseEvent == NULL)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
+			LOG_ERROR(logger) << "CreateEvent:" << hr;
 			return hr;
         }
     }
@@ -145,6 +165,10 @@ ULONG CPlayer::Release()
 
 HRESULT CPlayer::OpenMem(std::string name, const BYTE *pBuf, const int len)
 {
+	FUNC_TRACER("CPlayer::OpenMem");
+	while (!m_hwndVideo || !m_hwndEvent)
+		::Sleep(1000);
+
 	IStream* pMemStream = NULL;
 	IMFByteStream *pByteStream = NULL;
 	IMFTopology *pTopology = NULL;
@@ -203,7 +227,7 @@ done:
 //  Open a URL for playback.
 HRESULT CPlayer::OpenURL(const WCHAR *sURL)
 {
-    IMFTopology *pTopology = NULL;
+	IMFTopology *pTopology = NULL;
     IMFPresentationDescriptor* pSourcePD = NULL;
 
     // Create the media session.
@@ -286,7 +310,8 @@ HRESULT CPlayer::Stop()
 //  Repaint the video window. Call this method on WM_PAINT.
 HRESULT CPlayer::Repaint()
 {
-    if (m_pVideoDisplay)
+	LOG_TRACE(logger) << "CPlayer::Repaint	(" << m_pVideoDisplay << ")";
+	if (m_pVideoDisplay)
     {
         return m_pVideoDisplay->RepaintVideo();
     }
@@ -301,7 +326,8 @@ HRESULT CPlayer::Repaint()
 //  Call this method if the size of the video window changes.
 HRESULT CPlayer::ResizeVideo(WORD width, WORD height)
 {
-    if (m_pVideoDisplay)
+	LOG_TRACE(logger) << "CPlayer::ResizeVideo	(" << m_pVideoDisplay << ")";
+	if (m_pVideoDisplay)
     {
         // Set the destination rectangle.
         // Leave the default source rectangle (0,0,1,1).
@@ -319,7 +345,7 @@ HRESULT CPlayer::ResizeVideo(WORD width, WORD height)
 //  Callback for the asynchronous BeginGetEvent method.
 HRESULT CPlayer::Invoke(IMFAsyncResult *pResult)
 {
-    MediaEventType meType = MEUnknown;  // Event type
+	MediaEventType meType = MEUnknown;  // Event type
 
     IMFMediaEvent *pEvent = NULL;
 
@@ -336,11 +362,8 @@ HRESULT CPlayer::Invoke(IMFAsyncResult *pResult)
     else
     {
         hr = m_pSession->BeginGetEvent(this, NULL);
-        if (FAILED(hr))
-        {
-            goto done;
-        }
-    }
+		CHECK_HR(hr);
+	}
 
     if (m_state != Closing)
     {
@@ -357,13 +380,15 @@ done:
 
 HRESULT CPlayer::HandleEvent(UINT_PTR pEventPtr)
 {
-    HRESULT hrStatus = S_OK;            
+	BOOST_LOG_FUNCTION();
+	HRESULT hrStatus = S_OK;
     MediaEventType meType = MEUnknown;  
 
     IMFMediaEvent *pEvent = (IMFMediaEvent*)pEventPtr;
 
     if (pEvent == NULL)
     {
+		LOG_ERROR(logger) << "E_POINTER";
         return E_POINTER;
     }
 
@@ -378,7 +403,8 @@ HRESULT CPlayer::HandleEvent(UINT_PTR pEventPtr)
     // Check if the async operation succeeded.
     if (SUCCEEDED(hr) && FAILED(hrStatus)) 
     {
-        hr = hrStatus;
+		LOG_ERROR(logger) << "async operation failed, event:" << meType;
+		hr = hrStatus;
     }
 	CHECK_HR(hr);
 
@@ -397,6 +423,7 @@ HRESULT CPlayer::HandleEvent(UINT_PTR pEventPtr)
         break;
 
 	case MESessionEnded:
+		LOG_DEBUG(logger) << "MediaEvent: MESessionEnded";
 		::Sleep(1000);
 		NotifyPlay();
 		break;
@@ -436,39 +463,44 @@ HRESULT CPlayer::OnTopologyStatus(IMFMediaEvent *pEvent)
 	HRESULT hr = S_OK;
 	TOPOID TopoID = 0;
 	IMFTopology *pTopology = NULL;
-	IMFTopology *pFullTopo1 = NULL;
-	IMFTopology *pFullTopo2 = NULL;
+	IMFTopology *pFullTopo = NULL;
 
-	hr = GetEventObject(pEvent, &pTopology);
-	CHECK_HR(hr);
-	hr = pTopology->GetTopologyID(&TopoID);
-	CHECK_HR(hr);
-
-    UINT32 status; 
+    UINT32 status = 0;
     hr = pEvent->GetUINT32(MF_EVENT_TOPOLOGY_STATUS, &status);
 	CHECK_HR(hr);
 
 	switch (status)
 	{
 	case MF_TOPOSTATUS_READY:
+		LOG_DEBUG(logger) << "MediaEvent: MF_TOPOSTATUS_READY";
+		hr = GetEventObject(pEvent, &pTopology);	// 防止开始的闪烁
+		CHECK_HR(hr);
+		hr = pTopology->GetTopologyID(&TopoID);
+		CHECK_HR(hr);
+		hr = m_pSession->GetFullTopology(0, TopoID, &pFullTopo);
+		CHECK_HR(hr);
+
 		SafeRelease(&m_pVideoDisplay);
 		MFGetService(m_pSession, MR_VIDEO_RENDER_SERVICE, IID_PPV_ARGS(&m_pVideoDisplay));
 		hr = StartPlayback();
 		CHECK_HR(hr);
 		break;
 
+	case MF_TOPOSTATUS_STARTED_SOURCE:
+		break;
+
 	case MF_TOPOSTATUS_ENDED:
-		//hr = m_pSession->GetFullTopology(MFSESSION_SETTOPOLOGY_CLEAR_CURRENT, NULL, &pFullTopo1);
-		hr = m_pSession->GetFullTopology(0, TopoID, &pFullTopo2);
+		LOG_DEBUG(logger) << "MediaEvent: MF_TOPOSTATUS_ENDED";
 		hr = m_pSession->SetTopology(MFSESSION_SETTOPOLOGY_CLEAR_CURRENT, NULL);
 		CHECK_HR(hr);
 		break;
 	}
 
 done:
+	if (FAILED(hr))
+		LOG_DEBUG(logger) << "MediaEvent: " << status;
 	SafeRelease(&pTopology);
-	SafeRelease(&pFullTopo1);
-	SafeRelease(&pFullTopo2);
+	SafeRelease(&pFullTopo);
 	return hr;
 }
 
@@ -510,6 +542,7 @@ done:
     return S_OK;
 }
 
+BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(test_lg3, src::severity_logger< >)
 //  Create a new instance of the media session.
 HRESULT CPlayer::CreateSession()
 {
@@ -533,7 +566,9 @@ done:
 //  Close the media session. 
 HRESULT CPlayer::CloseSession()
 {
-    HRESULT hr = S_OK;
+	FUNC_TRACER("CPlayer::CloseSession");
+	BOOST_LOG_FUNCTION();
+	HRESULT hr = S_OK;
 
     SafeRelease(&m_pVideoDisplay);
 
@@ -551,6 +586,7 @@ HRESULT CPlayer::CloseSession()
             dwWaitResult = WaitForSingleObject(m_hCloseEvent, 5000);
             if (dwWaitResult == WAIT_TIMEOUT)
             {
+				LOG_ERROR(logger) << "timeout while waiting for Session->Close";
                 assert(FALSE);
             }
             // Now there will be no more events from this session.
@@ -581,7 +617,8 @@ HRESULT CPlayer::CloseSession()
 //  Start playback from the current position. 
 HRESULT CPlayer::StartPlayback()
 {
-    assert(m_pSession != NULL);
+	FUNC_TRACER("CPlayer::StartPlayback");
+	assert(m_pSession != NULL);
 
     PROPVARIANT varStart;
     PropVariantInit(&varStart);
@@ -618,19 +655,8 @@ HRESULT CreateMediaSource(PCWSTR sURL, IMFMediaSource **ppSource)
     IMFSourceResolver* pSourceResolver = NULL;
     IUnknown* pSource = NULL;
 
-    // Create the source resolver.
     HRESULT hr = MFCreateSourceResolver(&pSourceResolver);
-    if (FAILED(hr))
-    {
-        goto done;
-    }
-
-    // Use the source resolver to create the media source.
-
-    // Note: For simplicity this sample uses the synchronous method to create 
-    // the media source. However, creating a media source can take a noticeable
-    // amount of time, especially for a network source. For a more responsive 
-    // UI, use the asynchronous BeginCreateObjectFromURL method.
+	CHECK_HR(hr);
 
     hr = pSourceResolver->CreateObjectFromURL(
         sURL,                       // URL of the source.
@@ -639,10 +665,7 @@ HRESULT CreateMediaSource(PCWSTR sURL, IMFMediaSource **ppSource)
         &ObjectType,        // Receives the created object type. 
         &pSource            // Receives a pointer to the media source.
         );
-    if (FAILED(hr))
-    {
-        goto done;
-    }
+	CHECK_HR(hr);
 
     // Get the IMFMediaSource interface from the media source.
     hr = pSource->QueryInterface(IID_PPV_ARGS(ppSource));
@@ -914,8 +937,15 @@ void CPlayer::NotifyPlay()
 		_playList.push_back(item);
 		if (item.adfile)
 		{
+			LOG_DEBUG(logger) << "开始播放" << item.filename;
 			OpenMem(item.filename, (BYTE*)item.adfile->c_str(), item.adfile->length());
 			break;
 		}
 	}
+}
+
+void CPlayer::SetVideoWindow(HWND hVideo)
+{
+	m_hwndVideo = hVideo;
+	m_hwndEvent = hVideo;
 }

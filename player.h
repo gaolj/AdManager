@@ -14,8 +14,6 @@
 #include <mferror.h>
 #include <evr.h>
 
-#define CHECK_HR(hr) if (FAILED(hr)) { goto done; }
-
 template <class T> void SafeRelease(T **ppT)
 {
     if (*ppT)
@@ -52,6 +50,7 @@ public:
 	std::deque<PlayItem> _playList;	// 需要多线程同步
 	void UpdatePlayList(uint32_t id, std::shared_ptr<std::string> adfile);
 	void NotifyPlay();
+	void SetVideoWindow(HWND hVideo);
 
 	static HRESULT CreateInstance(HWND hVideo, HWND hEvent, CPlayer **ppPlayer);
 
