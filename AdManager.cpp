@@ -425,8 +425,8 @@ void AdManager::setConfig(const std::string& peerAddr, int peerPort, int barId, 
 
 CPlayer* AdManager::setVideoWnd(HWND hwnd)
 {
-	HRESULT hr = CPlayer::CreateInstance(hwnd, hwnd, &_pimpl->_pPlayer);
 	_pimpl->_hwnd = hwnd;
+	_pimpl->_pPlayer->SetVideoWindow(hwnd);
 	return _pimpl->_pPlayer;
 }
 
@@ -470,7 +470,12 @@ void AdManager::AdManagerImpl::bgnBusiness()
 		_tcpServer->start();
 	}
 	else
+	{
 		LOG_DEBUG(_logger) << "启动广告客户端";
+		HRESULT hr = CPlayer::CreateInstance(NULL, NULL, &_pPlayer);
+		if (FAILED(hr))
+			LOG_ERROR(_logger) << "CPlayer::CreateInstance 失败";
+	}
 
 	_iosBiz.post(
 		[this]()
