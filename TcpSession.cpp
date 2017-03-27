@@ -166,7 +166,22 @@ void TcpSession::handleNetError(const boost::system::error_code & ec)
 boost::future<Message> TcpSession::request(Message msg)
 {
 	std::shared_ptr<boost::promise<Message>> prom = std::make_shared<boost::promise<Message>>();
-	auto fut = prom->get_future();	// 可能抛异常，需要处理???
+	boost::future<Message> fut;
+	try
+	{
+		fut = prom->get_future();
+	}
+	catch (const boost::exception& ex)
+	{
+		LOG_ERROR(_logger) << boost::diagnostic_information(ex);
+		fut = boost::async([]() {
+			Message msg;
+			msg.set_returncode(-3);
+			msg.set_returnmsg("get_future exception");
+			return msg;
+		});
+		return fut;
+	}
 
 	_ios.post(
 		[this, msg, prom]() mutable
@@ -190,7 +205,7 @@ boost::future<Message> TcpSession::request(Message msg)
 			writeData();
 	});
 
-	return std::move(fut);
+	return fut;
 }
 
 void TcpSession::queueRspMsg(const Message& msg)
