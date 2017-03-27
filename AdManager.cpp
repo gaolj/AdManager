@@ -105,9 +105,9 @@ bool AdManager::AdManagerImpl::requestAd(int adId)
 	else
 	{
 		if (msgRsp.returncode() != 0)
-			LOG_DEBUG(_logger) << "请求广告信息失败:" << msgRsp.returncode() << ", " << msgRsp.returnmsg();
+			LOG_ERROR(_logger) << "请求广告信息失败:" << msgRsp.returncode() << ", " << msgRsp.returnmsg();
 		else
-			LOG_DEBUG(_logger) << "请求广告信息, content解析失败";
+			LOG_ERROR(_logger) << "请求广告信息, content解析失败";
 		return false;
 	}
 }
@@ -165,9 +165,9 @@ void AdManager::AdManagerImpl::requestAdList()
 		_timerAdList.expires_from_now(boost::posix_time::seconds(timeout));
 		_timerAdList.async_wait(boost::bind(&AdManager::AdManagerImpl::requestAdList, this));
 		if (msgRsp.returncode() != 0)
-			LOG_DEBUG(_logger) << "请求广告列表失败:" << msgRsp.returncode() << ", " << msgRsp.returnmsg();
+			LOG_ERROR(_logger) << "请求广告列表失败:" << msgRsp.returncode() << ", " << msgRsp.returnmsg();
 		else
-			LOG_DEBUG(_logger) << "请求广告列表失败, content解析失败";
+			LOG_ERROR(_logger) << "请求广告列表失败, content解析失败";
 	}
 }
 
@@ -207,9 +207,9 @@ void AdManager::AdManagerImpl::requestAdPlayPolicy()
 		// returncode为出错或_policy解析失败，则5分钟后重新requestAdPlayPolicy
 		_timerPolicy.expires_from_now(boost::posix_time::minutes(5));
 		if (msgRsp.returncode() != 0)
-			LOG_DEBUG(_logger) << "请求广告策略失败:" << msgRsp.returncode() << ", " << msgRsp.returnmsg();
+			LOG_ERROR(_logger) << "请求广告策略失败:" << msgRsp.returncode() << ", " << msgRsp.returnmsg();
 		else
-			LOG_DEBUG(_logger) << "请求广告策略失败, content解析失败";
+			LOG_ERROR(_logger) << "请求广告策略失败, content解析失败";
 	}
 
 	_timerPolicy.async_wait(boost::bind(&AdManager::AdManagerImpl::requestAdPlayPolicy, this));
@@ -293,7 +293,7 @@ void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 				boost::network::http::client::response response = httpClient.get(request);
 				if (response.status() != 200)
 				{
-					LOG_DEBUG(_logger) << "下载广告文件失败:" << response.status();
+					LOG_ERROR(_logger) << "下载广告文件(" << ad.filename() << ")失败" << response.status();
 					continue;
 				}
 
@@ -304,7 +304,7 @@ void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 				std::string md5 = context.hex_digest();	// hex_digest有泄漏
 				if (boost::to_upper_copy(ad.md5()) != boost::to_upper_copy(md5))
 				{
-					LOG_DEBUG(_logger) << "下载的广告文件(" << ad.filename() << ")md5校验失败";
+					LOG_ERROR(_logger) << "下载的广告文件(" << ad.filename() << ")md5校验失败";
 					continue;
 				}
 				else
@@ -350,7 +350,7 @@ void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 
 			if (msgRsp.returncode() != 0)
 			{
-				LOG_DEBUG(_logger) << "获取广告文件失败:" << msgRsp.returncode() << ", " << msgRsp.returnmsg();
+				LOG_ERROR(_logger) << "获取广告文件失败:" << msgRsp.returncode() << ", " << msgRsp.returnmsg();
 				return;
 			}
 
@@ -360,7 +360,7 @@ void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 			context.finalize();
 			std::string md5 = context.hex_digest();	// hex_digest有泄漏
 			if (boost::to_upper_copy(ad.md5()) != boost::to_upper_copy(md5))
-				LOG_DEBUG(_logger) << "下载广告文件(" << ad.filename() << ")的md5校验失败";
+				LOG_ERROR(_logger) << "下载广告文件(" << ad.filename() << ")的md5校验失败";
 			else
 			{
 				LOG_DEBUG(_logger) << "下载广告文件(" << ad.filename() << ")成功";
