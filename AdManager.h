@@ -27,7 +27,8 @@ public:
 		, std::string logLvl = "info");	// 日志级别
 
 	CPlayer* setVideoWnd(HWND hwnd);// 设置锁屏（视频）窗口句柄
-									
+	void closeVideoWnd();			// 关闭视频窗口
+
 	void bgnBusiness();				// 开始广告业务
 
 	void endBusiness();				// 停业广告业务

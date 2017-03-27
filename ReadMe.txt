@@ -56,26 +56,33 @@
 
 四、使用说明
 
+	AdManager类是单例，在一个程序中只能存在一个实例，可以通过
+	AdManager& adManager = AdManager::getInstance();获取此实例。
+
 	AdManager类通过setConfig设置后，可同时用在网吧服务端或网吧客户端。
 
-	服务端或客户端调用setConfig后，再调用bgnBusiness即可，
-	广告及策略的下载处理都在AdManager内部完成，对外部模块透明。
+	服务端或客户端调用setConfig后，再调用bgnBusiness进行广告策略及文件的下载处理。
 
-	客户端需要播放广告时，通过getAdPlayPolicy得到播放策略，
-	以及getAd、getAdFile得到广告信息和广告文件，然后完成播放。
+	客户端在锁屏窗口创建完成后调用setVideoWnd播放广告视频，在锁屏窗口
+	销毁前调用closeVideoWnd释放播放器相关资源。
 
 
 五、代码示例
 
 服务端：
 	AdManager& adManager = AdManager::getInstance();
-	// 参数依次为：中心ip，中心端口，网吧ID，是否是服务端，服务端监听端口
-	adManager.setConfig("139.224.61.179", 8888, 123456, true, 18888);
+	// 参数依次为：中心ip，中心端口，网吧ID，是否是服务端，服务端监听端口，日志级别
+	adManager.setConfig("139.224.61.179", 8888, 123456, true, 18888, "error");
 	adManager.bgnBusiness();
 
 客户端：
 	AdManager& adManager = AdManager::getInstance();
-	// 参数依次为：服务端ip，服务端端口，网吧ID，是否是服务端
-	adManager.setConfig("192.168.0.111", 18888, 123456, false);
+	// 参数依次为：服务端ip，服务端端口，网吧ID，是否是服务端，监听端口(无)，日志级别
+	adManager.setConfig("192.168.0.111", 18888, 123456, false, 0, "error);
 	adManager.bgnBusiness();
 
+	// 锁屏窗口创建完成后调用，m_hWnd为锁屏窗口的窗口句柄
+	adManager.setVideoWnd(m_hWnd);
+
+	// 在锁屏窗口销毁前调用，释放播放器相关资源
+	adManager.closeVideoWnd();

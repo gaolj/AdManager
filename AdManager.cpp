@@ -434,6 +434,11 @@ CPlayer* AdManager::setVideoWnd(HWND hwnd)
 	return _pimpl->_pPlayer;
 }
 
+void AdManager::closeVideoWnd()
+{
+	_pimpl->_pPlayer->Shutdown();
+}
+
 void AdManager::AdManagerImpl::setConfig(const std::string& peerAddr, int peerPort, int barId, bool isBarServer, int listenPort, const std::string& logLvl)
 {
 	using namespace boost::asio::ip;
