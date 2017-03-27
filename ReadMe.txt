@@ -5,7 +5,8 @@
 
 一、概述：
 
-本静态库实现了一个高性能、高并发的TCP Server，支持万级规模的并发TCP长连接及业务处理，具体特性如下：
+本静态库合并实现了网吧服务端和客户端广告业务功能。服务端实现了一个高性能、高并发、低资源占用的
+TCP Server，支持万级规模的并发TCP长连接及业务处理；客户端实现了视频播放功能，具体特性如下：
 
 	低资源消耗： 非常低的CPU和内存占用。服务端内存只消耗在广告文件的缓存
                 和每个TCP连接所需要用到的socket句柄所占用的windows核心内存
@@ -26,6 +27,8 @@
 
 	同时支持2010,vc2015，采用了C++11的部分新特性
 
+	视频播放采用了微软新一代的媒体播放技术（替代Direct Show）：Microsoft Media Foundation，
+	支持win7以上版本的windows，不支持windows XP。
 
 二、所采用的主要技术
 
@@ -33,6 +36,7 @@
 	日志：boost.log
 	线程：boost.thread(为了兼容vc2010，所有没用std::thread)
 	http：cpp-netlib
+	视频：Microsoft Media Foundation
 
 
 三、类和接口说明：
@@ -52,6 +56,8 @@
 
 	TcpServer：     代表一个TCP服务端
                     负责监听、接收TcpClient的连接请求，管理所有当前有效的TCP连接
+
+	CPlayer:		负责视频播放
 
 
 四、使用说明
