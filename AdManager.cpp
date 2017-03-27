@@ -142,16 +142,19 @@ void AdManager::AdManagerImpl::requestAdList()
 			_mapAd.insert(std::make_pair(ad.id(), ad));
 		}
 
-		BOOST_FOREACH(auto& adplay, _policy.adplays())
-			if (adplay.location() == 1)	// 广告位：锁屏-1
-				BOOST_FOREACH(auto id, adplay.adids())
-				{
-					_lockAds.insert(id);
-					PlayItem item;
-					item.id = id;
-					item.filename = _mapAd[id].filename();
-					_pPlayer->_playList.push_back(item);
-				}
+		if (!_isBarServer)
+		{
+			BOOST_FOREACH(auto& adplay, _policy.adplays())
+				if (adplay.location() == 1)	// 广告位：锁屏-1
+					BOOST_FOREACH(auto id, adplay.adids())
+					{
+						_lockAds.insert(id);
+						PlayItem item;
+						item.id = id;
+						item.filename = _mapAd[id].filename();
+						_pPlayer->_playList.push_back(item);
+					}
+		}
 
 		downloadAds();
 	}
