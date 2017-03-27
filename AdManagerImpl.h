@@ -60,6 +60,7 @@ public:
 	std::shared_ptr<TcpClient> _tcpClient;
 	std::shared_ptr<TcpServer> _tcpServer;
 
+	bool isEndBusiness;
 	boost::asio::deadline_timer _timerPolicy;
 	boost::asio::deadline_timer _timerAdList;
 	boost::asio::deadline_timer _timerDownload;

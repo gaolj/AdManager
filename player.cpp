@@ -7,6 +7,7 @@
 #pragma comment(lib, "mfplat.lib")
 #pragma comment(lib, "mfuuid.lib")
 #pragma comment(lib, "strmiids.lib")
+#pragma comment(lib, "Shlwapi.lib")		// SHCreateMemStream
 
 const UINT WM_APP_PLAYER_EVENT = WM_APP + 1000;
 

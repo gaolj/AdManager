@@ -27,6 +27,7 @@ private:
 
 inline void TcpClient::stop()
 {
+	setAutoReconnect(false);
 	_session->stopSession();
 }
 

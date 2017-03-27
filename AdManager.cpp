@@ -114,6 +114,9 @@ bool AdManager::AdManagerImpl::requestAd(int adId)
 
 void AdManager::AdManagerImpl::requestAdList()
 {
+	if (isEndBusiness)
+		return;
+
 	Message msgReq;
 	msgReq.set_method("getAdList");
 
@@ -171,6 +174,9 @@ void AdManager::AdManagerImpl::requestAdList()
 
 void AdManager::AdManagerImpl::requestAdPlayPolicy()
 {
+	if (isEndBusiness)
+		return;
+
 	Message msgReq;
 	msgReq.set_method("getAdPlayPolicy");
 
@@ -365,12 +371,7 @@ void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 				if (_lockAds.find(id) != _lockAds.end())
 				{
 					_pPlayer->UpdatePlayList(id, std::make_shared<std::string>(std::move(body)));
-					static bool first = false;
-					if (!first)
-					{
-						first = true;
-						_pPlayer->NotifyPlay();
-					}
+					_pPlayer->SetMediaSourceReady(true);
 				}
 			}
 		}
@@ -387,6 +388,9 @@ void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 
 void AdManager::AdManagerImpl::downloadAds()
 {
+	if (isEndBusiness)
+		return;
+
 	// 提取该网吧所需的所有需要下载的广告ID，策略中去重
 	std::set<google::protobuf::int32> idSet;
 	BOOST_FOREACH(auto& adplay, _policy.adplays())	// for (auto& adplay : _policy.adplays())
@@ -493,6 +497,7 @@ AdManager::AdManager() :
 {
 }
 AdManager::AdManagerImpl::AdManagerImpl() :
+	isEndBusiness(false),
 	_timerPolicy(_iosBiz),
 	_timerAdList(_iosBiz),
 	_timerDownload(_iosBiz),
@@ -529,6 +534,7 @@ AdManager::~AdManager()
 AdManager::AdManagerImpl::~AdManagerImpl()
 {
 	endBusiness();
+	google::protobuf::ShutdownProtobufLibrary();
 }
 
 
@@ -538,10 +544,22 @@ void AdManager::endBusiness()
 }
 void AdManager::AdManagerImpl::endBusiness()
 {
-	_iosNet.stop();
-	_iosBiz.stop();
+	isEndBusiness = true;
+
 	if (_tcpClient)
 		_tcpClient->stop();
 	if (_tcpServer)
 		_tcpServer->stop();
+
+	_iosNet.stop();
+	_iosBiz.stop();
+	_threadNet.join();
+	_threadBiz.join();
+
+	if (_pPlayer)
+	{
+		_pPlayer->Shutdown();
+		if (0 == _pPlayer->Release())
+			_pPlayer = NULL;
+	}
 }
