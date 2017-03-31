@@ -19,6 +19,9 @@
     <Filter Include="Http">
       <UniqueIdentifier>{6e3e2f69-196b-47e6-8ea9-a395670977e2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Lib">
+      <UniqueIdentifier>{ce9c8a5e-0125-4044-a7cc-890c28432bc3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
@@ -107,5 +110,13 @@
     <ClInclude Include="player.h">
       <Filter>头文件</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="lib\protobuf-3.2.0\vs2010\libprotobuf.lib">
+      <Filter>Lib</Filter>
+    </Library>
+    <Library Include="lib\protobuf-3.2.0\vs2010\libprotobufd.lib">
+      <Filter>Lib</Filter>
+    </Library>
   </ItemGroup>
 </Project>

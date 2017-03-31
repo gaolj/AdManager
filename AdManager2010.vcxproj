@@ -61,7 +61,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalLibraryDirectories>..\cpp-netlib-0.9.4\vs2010\libs\network\src\Debug;..\protobuf-3.2.0\cmake\vs2010\Debug</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\protobuf-3.2.0\vs2010</AdditionalLibraryDirectories>
       <AdditionalOptions>libprotobufD.lib %(AdditionalOptions)</AdditionalOptions>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
     </Lib>
@@ -84,7 +84,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <Lib>
-      <AdditionalLibraryDirectories>..\cpp-netlib-0.9.4\vs2010\libs\network\src\release;..\protobuf-3.2.0\cmake\vs2010\release</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>lib\protobuf-3.2.0\vs2010</AdditionalLibraryDirectories>
       <AdditionalOptions>libprotobuf.lib %(AdditionalOptions)</AdditionalOptions>
     </Lib>
   </ItemDefinitionGroup>
@@ -121,6 +121,10 @@
     <ClInclude Include="TcpClient.h" />
     <ClInclude Include="TcpServer.h" />
     <ClInclude Include="TcpSession.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="lib\protobuf-3.2.0\vs2010\libprotobuf.lib" />
+    <Library Include="lib\protobuf-3.2.0\vs2010\libprotobufd.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
