@@ -16,6 +16,9 @@
     <Filter Include="Proto">
       <UniqueIdentifier>{9ef6d54b-1338-439f-b388-f6fbb55b8bd4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Http">
+      <UniqueIdentifier>{6e3e2f69-196b-47e6-8ea9-a395670977e2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
@@ -59,6 +62,15 @@
     </ClCompile>
     <ClCompile Include="player.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Http\client.cpp">
+      <Filter>Http</Filter>
+    </ClCompile>
+    <ClCompile Include="Http\uri\schemes.cpp">
+      <Filter>Http</Filter>
+    </ClCompile>
+    <ClCompile Include="Http\uri\uri.cpp">
+      <Filter>Http</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

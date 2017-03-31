@@ -62,7 +62,7 @@
     </Link>
     <Lib>
       <AdditionalLibraryDirectories>..\cpp-netlib-0.9.4\vs2010\libs\network\src\Debug;..\protobuf-3.2.0\cmake\vs2010\Debug</AdditionalLibraryDirectories>
-      <AdditionalOptions>libprotobufD.lib cppnetlib-uri.lib cppnetlib-client-connections.lib %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>libprotobufD.lib %(AdditionalOptions)</AdditionalOptions>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
@@ -85,7 +85,7 @@
     </Link>
     <Lib>
       <AdditionalLibraryDirectories>..\cpp-netlib-0.9.4\vs2010\libs\network\src\release;..\protobuf-3.2.0\cmake\vs2010\release</AdditionalLibraryDirectories>
-      <AdditionalOptions>libprotobuf.lib cppnetlib-uri.lib cppnetlib-client-connections.lib %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>libprotobuf.lib %(AdditionalOptions)</AdditionalOptions>
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -98,6 +98,9 @@
     <ClCompile Include="AdManager.cpp" />
     <ClCompile Include="ad\AdPlayPolicy.pb.cc" />
     <ClCompile Include="ad\Message.pb.cc" />
+    <ClCompile Include="Http\client.cpp" />
+    <ClCompile Include="Http\uri\schemes.cpp" />
+    <ClCompile Include="Http\uri\uri.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="md5.cc" />
     <ClCompile Include="player.cpp" />
