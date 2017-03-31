@@ -69,7 +69,6 @@
     <Lib>
       <AdditionalLibraryDirectories>
       </AdditionalLibraryDirectories>
-      <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
@@ -125,10 +124,6 @@
     <ClInclude Include="TcpClient.h" />
     <ClInclude Include="TcpServer.h" />
     <ClInclude Include="TcpSession.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Library Include="lib\protobuf-3.2.0\vs2015\libprotobuf.lib" />
-    <Library Include="lib\protobuf-3.2.0\vs2015\libprotobufd.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

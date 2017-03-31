@@ -16,9 +16,6 @@
     <Filter Include="Proto">
       <UniqueIdentifier>{9ef6d54b-1338-439f-b388-f6fbb55b8bd4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Lib">
-      <UniqueIdentifier>{15058c0c-a5e2-4b73-a861-42b3e3c6bca1}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Http">
       <UniqueIdentifier>{c16f9d5b-18c3-4c71-bf51-a7fc2bd593a0}</UniqueIdentifier>
     </Filter>
@@ -111,13 +108,5 @@
     <ClInclude Include="player.h">
       <Filter>头文件</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Library Include="lib\protobuf-3.2.0\vs2015\libprotobuf.lib">
-      <Filter>Lib</Filter>
-    </Library>
-    <Library Include="lib\protobuf-3.2.0\vs2015\libprotobufd.lib">
-      <Filter>Lib</Filter>
-    </Library>
   </ItemGroup>
 </Project>
