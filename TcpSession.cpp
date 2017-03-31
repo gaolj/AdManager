@@ -133,7 +133,7 @@ std::pair<bool, boost::promise<Message>> TcpSession::findReqPromise(const Messag
 		{
 			auto ret = std::make_pair(true, std::move(*it->prom));
 			_lstRequestCtx.erase(it);
-			return ret;
+			return std::move(ret);
 		}
 
 	return std::make_pair(false, boost::promise<Message>());
@@ -174,13 +174,10 @@ boost::future<Message> TcpSession::request(Message msg)
 	catch (const boost::exception& ex)
 	{
 		LOG_ERROR(_logger) << boost::diagnostic_information(ex);
-		fut = boost::async([]() {
-			Message msg;
-			msg.set_returncode(-3);
-			msg.set_returnmsg("get_future exception");
-			return msg;
-		});
-		return fut;
+		Message msg;
+		msg.set_returncode(-3);
+		msg.set_returnmsg("get_future exception");
+		return boost::make_ready_future(msg);
 	}
 
 	_ios.post(

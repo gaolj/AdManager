@@ -33,9 +33,6 @@
     <ClCompile Include="AdManager.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="AdTest.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="Logger.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -54,14 +51,14 @@
     <ClCompile Include="TcpSession.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="TcpSessionPool.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="ad\AdPlayPolicy.pb.cc">
       <Filter>Proto</Filter>
     </ClCompile>
     <ClCompile Include="ad\Message.pb.cc">
       <Filter>Proto</Filter>
+    </ClCompile>
+    <ClCompile Include="player.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -86,14 +83,17 @@
     <ClInclude Include="TcpSession.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="TcpSessionPool.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="ad\AdPlayPolicy.pb.h">
       <Filter>Proto</Filter>
     </ClInclude>
     <ClInclude Include="ad\Message.pb.h">
       <Filter>Proto</Filter>
+    </ClInclude>
+    <ClInclude Include="AdManagerImpl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="player.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

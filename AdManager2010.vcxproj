@@ -40,6 +40,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)$(Configuration)2010\</OutDir>
     <IntDir>$(Configuration)2010\</IntDir>
+    <TargetName>$(ProjectName)D</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)$(Configuration)2010\</OutDir>
@@ -51,7 +52,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_WIN32_WINNT=0x0501;BOOST_THREAD_PROVIDES_FUTURE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;BOOST_THREAD_PROVIDES_FUTURE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>D:\Program Files\boost_1_59_0;..\protobuf-3.2.0\src;..\cpp-netlib-0.9.4;ad</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4244;4003;4005;4996</DisableSpecificWarnings>
     </ClCompile>
@@ -60,8 +61,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <Lib>
-      <AdditionalLibraryDirectories>D:\Program Files\boost_1_59_0\lib32-msvc-10.0;..\cpp-netlib-0.9.4\vs2010\libs\network\src\Debug;..\protobuf-3.2.0\cmake\vs2010\Debug</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\cpp-netlib-0.9.4\vs2010\libs\network\src\Debug;..\protobuf-3.2.0\cmake\vs2010\Debug</AdditionalLibraryDirectories>
       <AdditionalOptions>libprotobufD.lib cppnetlib-uri.lib cppnetlib-client-connections.lib %(AdditionalOptions)</AdditionalOptions>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -72,7 +74,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;_WIN32_WINNT=0x0501;BOOST_THREAD_PROVIDES_FUTURE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;BOOST_THREAD_PROVIDES_FUTURE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>D:\Program Files\boost_1_59_0;..\protobuf-3.2.0\src;..\cpp-netlib-0.9.4;ad</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -82,7 +84,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <Lib>
-      <AdditionalLibraryDirectories>D:\Program Files\boost_1_59_0\lib32-msvc-10.0;..\cpp-netlib-0.9.4\vs2010\libs\network\src\release;..\protobuf-3.2.0\cmake\vs2010\release</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\cpp-netlib-0.9.4\vs2010\libs\network\src\release;..\protobuf-3.2.0\cmake\vs2010\release</AdditionalLibraryDirectories>
       <AdditionalOptions>libprotobuf.lib cppnetlib-uri.lib cppnetlib-client-connections.lib %(AdditionalOptions)</AdditionalOptions>
     </Lib>
   </ItemDefinitionGroup>
@@ -94,28 +96,28 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AdManager.cpp" />
-    <ClCompile Include="AdTest.cpp" />
     <ClCompile Include="ad\AdPlayPolicy.pb.cc" />
     <ClCompile Include="ad\Message.pb.cc" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="md5.cc" />
+    <ClCompile Include="player.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="TcpClient.cpp" />
     <ClCompile Include="TcpServer.cpp" />
     <ClCompile Include="TcpSession.cpp" />
-    <ClCompile Include="TcpSessionPool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AdManager.h" />
+    <ClInclude Include="AdManagerImpl.h" />
     <ClInclude Include="ad\AdPlayPolicy.pb.h" />
     <ClInclude Include="ad\Message.pb.h" />
     <ClInclude Include="Logger.h" />
+    <ClInclude Include="player.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="TcpClient.h" />
     <ClInclude Include="TcpServer.h" />
     <ClInclude Include="TcpSession.h" />
-    <ClInclude Include="TcpSessionPool.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

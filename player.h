@@ -13,6 +13,7 @@
 #include <mfidl.h>
 #include <mferror.h>
 #include <evr.h>
+#include <stdint.h>
 
 template <class T> void SafeRelease(T **ppT)
 {

@@ -10,6 +10,7 @@
 #include <boost/date_time/posix_time/posix_time_types.hpp>	// boost::mutex, boost::unique_lock
 #include <list>
 #include <deque>
+#include <stdint.h>
 
 typedef std::function<void(Message msg)> requestHandler;
 
