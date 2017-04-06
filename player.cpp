@@ -3,19 +3,31 @@
 #include <assert.h>
 #include <boost/atomic.hpp>				// boost::atomic_bool
 
-#pragma comment(lib, "mf.lib")
-#pragma comment(lib, "mfplat.lib")
-#pragma comment(lib, "mfuuid.lib")
-#pragma comment(lib, "strmiids.lib")
+#pragma comment(lib, "mfuuid.lib")		// MF_EVENT_TOPOLOGY_STATUS MFMediaType_Audio MFMediaType_Video
+#pragma comment(lib, "strmiids.lib")	// MR_VIDEO_RENDER_SERVICE
 #pragma comment(lib, "Shlwapi.lib")		// SHCreateMemStream
+
+HINSTANCE hLibMFPlat = NULL;
+_MFCreateMFByteStreamOnStream lpfMFCreateMFByteStreamOnStream = NULL;
+_MFCreateSourceResolver lpfMFCreateSourceResolver = NULL;
+_MFShutdown lpfMFShutdown = NULL;
+_MFStartup lpfMFStartup = NULL;
+
+HINSTANCE hLibMF = NULL;
+_MFCreateAudioRendererActivate lpfMFCreateAudioRendererActivate = NULL;
+_MFCreateMediaSession lpfMFCreateMediaSession = NULL;
+_MFCreateTopology lpfMFCreateTopology = NULL;
+_MFCreateTopologyNode lpfMFCreateTopologyNode = NULL;
+_MFCreateVideoRendererActivate lpfMFCreateVideoRendererActivate = NULL;
+_MFGetService lpfMFGetService = NULL;
+
 
 const UINT WM_APP_PLAYER_EVENT = WM_APP + 1000;
 
-BOOST_LOG_GLOBAL_LOGGER_CTOR_ARGS(
-	player_logger,
-	src::severity_channel_logger_mt<SeverityLevel>,
-	(keywords::channel = "player"))
-	src::severity_channel_logger_mt<SeverityLevel>& logger = player_logger::get();
+BOOST_LOG_GLOBAL_LOGGER_CTOR_ARGS(player_logger,
+								src::severity_channel_logger_mt<SeverityLevel>,
+								(keywords::channel = "player"))
+src::severity_channel_logger_mt<SeverityLevel>& logger = player_logger::get();
 
 #define CHECK_HR(hr)			\
 	if (FAILED(hr))				\
@@ -91,8 +103,29 @@ HRESULT CPlayer::CreateInstance(
 
 HRESULT CPlayer::Initialize()
 {
-    // Start up Media Foundation platform.
-    HRESULT hr = MFStartup(MF_VERSION);
+	if (!GetProcAddresses(&hLibMFPlat, "mfplat.dll", 4,
+		&lpfMFCreateMFByteStreamOnStream,	"MFCreateMFByteStreamOnStream",
+		&lpfMFCreateSourceResolver,			"MFCreateSourceResolver",
+		&lpfMFShutdown,						"MFShutdown",
+		&lpfMFStartup,						"MFStartup"))
+	{
+		LOG_ERROR(logger) << "GetProcAddresses from mfplat failed";
+		return -1;
+	}
+
+	if (!GetProcAddresses(&hLibMF, "mf.dll", 6,
+		&lpfMFCreateAudioRendererActivate,	"MFCreateAudioRendererActivate",
+		&lpfMFCreateMediaSession,			"MFCreateMediaSession",
+		&lpfMFCreateTopology,				"MFCreateTopology",
+		&lpfMFCreateTopologyNode,			"MFCreateTopologyNode",
+		&lpfMFCreateVideoRendererActivate,	"MFCreateVideoRendererActivate",
+		&lpfMFGetService,					"MFGetService"))
+	{
+		LOG_ERROR(logger) << "GetProcAddresses from mf failed";
+		return -1;
+	}
+
+	HRESULT hr = lpfMFStartup(MF_VERSION, MFSTARTUP_FULL);	// MFSTARTUP_FULL	MFSTARTUP_NOSOCKET
     if (SUCCEEDED(hr))
     {
         m_hCloseEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -188,7 +221,7 @@ HRESULT CPlayer::OpenMem(std::string name, const BYTE *pBuf, const int len)
 		hr = -1;
 	CHECK_HR(hr);
 
-	hr = MFCreateMFByteStreamOnStream(pMemStream, &pByteStream);
+	hr = lpfMFCreateMFByteStreamOnStream(pMemStream, &pByteStream);
 	CHECK_HR(hr);
 
 	hr = CreateMediaSource(pwszFileName, pByteStream, &m_pSource);
@@ -402,7 +435,7 @@ HRESULT CPlayer::Shutdown()
     HRESULT hr = CloseSession();
 
     // Shutdown the Media Foundation platform
-    MFShutdown();
+	lpfMFShutdown();
 
     if (m_hCloseEvent)
     {
@@ -412,8 +445,6 @@ HRESULT CPlayer::Shutdown()
 
     return hr;
 }
-
-/// Protected methods
 
 HRESULT CPlayer::OnTopologyStatus(IMFMediaEvent *pEvent)
 {
@@ -438,7 +469,7 @@ HRESULT CPlayer::OnTopologyStatus(IMFMediaEvent *pEvent)
 		CHECK_HR(hr);
 
 		SafeRelease(&m_pVideoDisplay);
-		MFGetService(m_pSession, MR_VIDEO_RENDER_SERVICE, IID_PPV_ARGS(&m_pVideoDisplay));
+		lpfMFGetService(m_pSession, MR_VIDEO_RENDER_SERVICE, IID_PPV_ARGS(&m_pVideoDisplay));
 		hr = StartPlayback();
 		CHECK_HR(hr);
 		break;
@@ -499,8 +530,6 @@ done:
     return S_OK;
 }
 
-BOOST_LOG_INLINE_GLOBAL_LOGGER_DEFAULT(test_lg3, src::severity_logger< >)
-//  Create a new instance of the media session.
 HRESULT CPlayer::CreateSession()
 {
     HRESULT hr = CloseSession();
@@ -508,7 +537,7 @@ HRESULT CPlayer::CreateSession()
 
     assert(m_state == Closed);
 
-    hr = MFCreateMediaSession(NULL, &m_pSession);
+    hr = lpfMFCreateMediaSession(NULL, &m_pSession);
 	CHECK_HR(hr);
 
     hr = m_pSession->BeginGetEvent((IMFAsyncCallback*)this, NULL);
@@ -612,7 +641,7 @@ HRESULT CreateMediaSource(PCWSTR sURL, IMFMediaSource **ppSource)
     IMFSourceResolver* pSourceResolver = NULL;
     IUnknown* pSource = NULL;
 
-    HRESULT hr = MFCreateSourceResolver(&pSourceResolver);
+    HRESULT hr = lpfMFCreateSourceResolver(&pSourceResolver);
 	CHECK_HR(hr);
 
     hr = pSourceResolver->CreateObjectFromURL(
@@ -657,12 +686,12 @@ HRESULT CreateMediaSinkActivate(
     if (MFMediaType_Audio == guidMajorType)
     {
         // Create the audio renderer.
-        hr = MFCreateAudioRendererActivate(&pActivate);
+        hr = lpfMFCreateAudioRendererActivate(&pActivate);
     }
     else if (MFMediaType_Video == guidMajorType)
     {
         // Create the video renderer.
-        hr = MFCreateVideoRendererActivate(hVideoWindow, &pActivate);
+        hr = lpfMFCreateVideoRendererActivate(hVideoWindow, &pActivate);
     }
     else
     {
@@ -693,7 +722,7 @@ HRESULT AddSourceNode(
     IMFTopologyNode *pNode = NULL;
 
     // Create the node.
-    HRESULT hr = MFCreateTopologyNode(MF_TOPOLOGY_SOURCESTREAM_NODE, &pNode);
+    HRESULT hr = lpfMFCreateTopologyNode(MF_TOPOLOGY_SOURCESTREAM_NODE, &pNode);
 	CHECK_HR(hr);
 
     // Set the attributes.
@@ -729,7 +758,7 @@ HRESULT AddOutputNode(
     IMFTopologyNode *pNode = NULL;
 
     // Create the node.
-    HRESULT hr = MFCreateTopologyNode(MF_TOPOLOGY_OUTPUT_NODE, &pNode);
+    HRESULT hr = lpfMFCreateTopologyNode(MF_TOPOLOGY_OUTPUT_NODE, &pNode);
 	CHECK_HR(hr);
 
     // Set the object pointer.
@@ -822,7 +851,7 @@ HRESULT CreatePlaybackTopology(
     DWORD cSourceStreams = 0;
 
     // Create a new topology.
-    HRESULT hr = MFCreateTopology(&pTopology);
+    HRESULT hr = lpfMFCreateTopology(&pTopology);
 	CHECK_HR(hr);
 
     // Get the number of streams in the media source.
@@ -852,7 +881,7 @@ HRESULT CreateMediaSource(LPCWSTR pwszFileName, IMFByteStream *pByteStream, IMFM
 	IMFSourceResolver* pSourceResolver = NULL;
 	IUnknown* pSource = NULL;
 
-	HRESULT hr = MFCreateSourceResolver(&pSourceResolver);
+	HRESULT hr = lpfMFCreateSourceResolver(&pSourceResolver);
 	CHECK_HR(hr);
 
 	hr = pSourceResolver->CreateObjectFromByteStream(
@@ -925,3 +954,37 @@ void CPlayer::SetMediaSourceReady(bool isReady)
 	ready = isReady;
 }
 
+BOOL GetProcAddresses(HINSTANCE *hLibrary, LPCSTR lpszLibrary, INT nCount, ...)
+{
+	va_list va;
+	va_start(va, nCount);
+
+	if ((*hLibrary = LoadLibrary(lpszLibrary)) != NULL)
+	{
+		FARPROC * lpfProcFunction = NULL;
+		LPSTR lpszFuncName = NULL;
+		INT nIdxCount = 0;
+		while (nIdxCount < nCount)
+		{
+			lpfProcFunction = va_arg(va, FARPROC*);
+			lpszFuncName = va_arg(va, LPSTR);
+			if ((*lpfProcFunction =
+				GetProcAddress(*hLibrary,
+					lpszFuncName)) == NULL)
+			{
+				LOG_ERROR(logger) << "GetProcAddress " << lpszLibrary << lpszFuncName << ":" << GetLastError();
+				lpfProcFunction = NULL;
+				return FALSE;
+			}
+			nIdxCount++;
+		}
+	}
+	else
+	{
+		LOG_ERROR(logger) << "LoadLibrary " << lpszLibrary << ":" << GetLastError();
+		va_end(va);
+		return FALSE;
+	}
+	va_end(va);
+	return TRUE;
+}

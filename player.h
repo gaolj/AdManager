@@ -15,6 +15,20 @@
 #include <evr.h>
 #include <stdint.h>
 
+typedef HRESULT (WINAPI *_MFCreateMFByteStreamOnStream)(IStream*, IMFByteStream**);
+typedef HRESULT (WINAPI *_MFCreateSourceResolver)(IMFSourceResolver **);
+typedef HRESULT (WINAPI *_MFShutdown)(void);
+typedef HRESULT (WINAPI *_MFStartup)(ULONG, DWORD);
+
+typedef HRESULT (WINAPI *_MFCreateAudioRendererActivate)(IMFActivate**);
+typedef HRESULT (WINAPI *_MFCreateMediaSession)(IMFAttributes*,IMFMediaSession**);
+typedef HRESULT (WINAPI *_MFCreateTopology)(IMFTopology**);
+typedef HRESULT (WINAPI *_MFCreateTopologyNode)(MF_TOPOLOGY_TYPE, IMFTopologyNode**);
+typedef HRESULT (WINAPI *_MFCreateVideoRendererActivate)(HWND, IMFActivate**);
+typedef HRESULT (WINAPI *_MFGetService)(IUnknown *, REFGUID, REFIID, LPVOID*);
+
+BOOL GetProcAddresses(HINSTANCE *hLibrary, LPCSTR lpszLibrary, INT nCount, ...);
+
 template <class T> void SafeRelease(T **ppT)
 {
     if (*ppT)
@@ -23,9 +37,6 @@ template <class T> void SafeRelease(T **ppT)
         *ppT = NULL;
     }
 }
-
-
-    // WPARAM = IMFMediaEvent*, WPARAM = MediaEventType
 
 enum PlayerState
 {
