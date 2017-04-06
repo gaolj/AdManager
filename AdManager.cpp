@@ -114,7 +114,7 @@ bool AdManager::AdManagerImpl::requestAd(int adId)
 
 void AdManager::AdManagerImpl::requestAdList()
 {
-	if (isEndBusiness)
+	if (_isEndBusiness)
 		return;
 
 	Message msgReq;
@@ -152,7 +152,8 @@ void AdManager::AdManagerImpl::requestAdList()
 						PlayItem item;
 						item.id = id;
 						item.filename = _mapAd[id].filename();
-						_pPlayer->_playList.push_back(item);
+						if (_pPlayer)
+							_pPlayer->_playList.push_back(item);
 					}
 		}
 
@@ -177,7 +178,7 @@ void AdManager::AdManagerImpl::requestAdList()
 
 void AdManager::AdManagerImpl::requestAdPlayPolicy()
 {
-	if (isEndBusiness)
+	if (_isEndBusiness)
 		return;
 
 	Message msgReq;
@@ -373,8 +374,11 @@ void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 
 				if (_lockAds.find(id) != _lockAds.end())
 				{
-					_pPlayer->UpdatePlayList(id, std::make_shared<std::string>(std::move(body)));
-					_pPlayer->SetMediaSourceReady(true);
+					if (_pPlayer)
+					{
+						_pPlayer->UpdatePlayList(id, std::make_shared<std::string>(std::move(body)));
+						_pPlayer->SetMediaSourceReady(true);
+					}
 				}
 			}
 		}
@@ -391,7 +395,7 @@ void AdManager::AdManagerImpl::downloadAd(uint32_t id)
 
 void AdManager::AdManagerImpl::downloadAds()
 {
-	if (isEndBusiness)
+	if (_isEndBusiness)
 		return;
 
 	// 提取该网吧所需的所有需要下载的广告ID，策略中去重
@@ -433,13 +437,15 @@ void AdManager::setConfig(const std::string& peerAddr, int peerPort, int barId, 
 CPlayer* AdManager::setVideoWnd(HWND hwnd)
 {
 	_pimpl->_hwnd = hwnd;
-	_pimpl->_pPlayer->SetVideoWindow(hwnd);
+	if (_pimpl->_pPlayer)
+		_pimpl->_pPlayer->SetVideoWindow(hwnd);
 	return _pimpl->_pPlayer;
 }
 
 void AdManager::closeVideoWnd()
 {
-	_pimpl->_pPlayer->Shutdown();
+	if (_pimpl->_pPlayer)
+		_pimpl->_pPlayer->Shutdown();
 }
 
 void AdManager::AdManagerImpl::setConfig(const std::string& peerAddr, int peerPort, int barId, bool isBarServer, int listenPort, const std::string& logLvl)
@@ -505,7 +511,8 @@ AdManager::AdManager() :
 {
 }
 AdManager::AdManagerImpl::AdManagerImpl() :
-	isEndBusiness(false),
+	_pPlayer(NULL),
+	_isEndBusiness(false),
 	_timerPolicy(_iosBiz),
 	_timerAdList(_iosBiz),
 	_timerDownload(_iosBiz),
@@ -552,7 +559,7 @@ void AdManager::endBusiness()
 }
 void AdManager::AdManagerImpl::endBusiness()
 {
-	isEndBusiness = true;
+	_isEndBusiness = true;
 
 	if (_tcpClient)
 		_tcpClient->stop();
