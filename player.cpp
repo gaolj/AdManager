@@ -126,17 +126,20 @@ HRESULT CPlayer::Initialize()
 	}
 
 	HRESULT hr = lpfMFStartup(MF_VERSION, MFSTARTUP_FULL);	// MFSTARTUP_FULL	MFSTARTUP_NOSOCKET
-    if (SUCCEEDED(hr))
-    {
-        m_hCloseEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-        if (m_hCloseEvent == NULL)
-        {
-            hr = HRESULT_FROM_WIN32(GetLastError());
-			LOG_ERROR(logger) << "CreateEvent:" << hr;
-			return hr;
-        }
-    }
-    return hr;
+	if (FAILED(hr))
+	{
+		LOG_ERROR(logger) << std::showbase << std::uppercase << std::hex << "MFStartup:" << hr << std::noshowbase << std::nouppercase << std::dec; \
+		return hr;
+	}
+
+	m_hCloseEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (m_hCloseEvent == NULL)
+	{
+		LOG_ERROR(logger) << "CreateEvent:" << GetLastError();
+		return HRESULT_FROM_WIN32(GetLastError());
+	}
+
+	return S_OK;
 }
 
 CPlayer::CPlayer(HWND hVideo, HWND hEvent) : 
