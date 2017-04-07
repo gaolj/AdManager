@@ -36,6 +36,8 @@ public:
 
 	Ad getAd(int adId);				// 单个广告信息
 
+	std::string getLockImage();		// 锁屏广告图片
+
 	std::shared_ptr<std::string> getAdFile(int adId);// 单个广告文件
 
 	AdPlayPolicy getAdPlayPolicy();	// 广告播放策略

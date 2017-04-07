@@ -114,6 +114,7 @@
     <ClInclude Include="AdManagerImpl.h" />
     <ClInclude Include="ad\AdPlayPolicy.pb.h" />
     <ClInclude Include="ad\Message.pb.h" />
+    <ClInclude Include="CGdiPlusBitmap.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="player.h" />
     <ClInclude Include="stdafx.h" />

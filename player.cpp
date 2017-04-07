@@ -97,6 +97,7 @@ HRESULT CPlayer::CreateInstance(
     {
 		LOG_ERROR(logger) << "Player->Initialize";
 		pPlayer->Release();
+		*ppPlayer = NULL;
     }
     return hr;
 }
@@ -438,7 +439,8 @@ HRESULT CPlayer::Shutdown()
     HRESULT hr = CloseSession();
 
     // Shutdown the Media Foundation platform
-	lpfMFShutdown();
+	if (lpfMFShutdown)
+		lpfMFShutdown();
 
     if (m_hCloseEvent)
     {
@@ -924,7 +926,7 @@ void CPlayer::NotifyPlay()
 		auto item = _playList.front();
 		_playList.pop_front();
 		_playList.push_back(item);
-		if (item.adfile)
+		if (item.type == 1 && item.adfile)
 		{
 			LOG_DEBUG(logger) << "¿ªÊ¼²¥·Å" << item.filename;
 			OpenMem(item.filename, (BYTE*)item.adfile->c_str(), item.adfile->length());

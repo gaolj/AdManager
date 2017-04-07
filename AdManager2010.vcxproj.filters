@@ -107,5 +107,8 @@
     <ClInclude Include="player.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="CGdiPlusBitmap.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

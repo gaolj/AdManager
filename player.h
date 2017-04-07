@@ -52,6 +52,7 @@ enum PlayerState
 struct PlayItem
 {
 	uint32_t id;
+	uint32_t type;		// 视频-1，本地Web页面-2，超链接-3，图片-4，图标-5
 	std::string filename;
 	std::shared_ptr<std::string> adfile;
 };

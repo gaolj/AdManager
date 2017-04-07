@@ -28,6 +28,26 @@ Ad AdManager::getAd(int adId)
 	return _pimpl->_mapAd[adId];
 }
 
+std::string AdManager::getLockImage()
+{
+	BOOST_FOREACH(auto id, _pimpl->_lockAds)	// for (auto id : _lockAds)
+	{
+		// 从广告信息列表中取image
+		auto it = _pimpl->_mapAd.find(id);
+		if (it != _pimpl->_mapAd.end() && it->second.type() == 4)
+			if (!it->second.image().empty())
+				return it->second.image();
+			else
+			{
+				// 从广告文件buf取image
+				auto it = _pimpl->_bufImages.find(id);
+				if (it != _pimpl->_bufImages.end())
+						return *it->second;
+			}
+	}
+	return "";
+}
+
 std::shared_ptr<std::string> AdManager::getAdFile(int adId)
 {
 	unique_lock<mutex> lck(_pimpl->_mutex);
@@ -151,6 +171,7 @@ void AdManager::AdManagerImpl::requestAdList()
 						_lockAds.insert(id);
 						PlayItem item;
 						item.id = id;
+						item.type = _mapAd[id].type();
 						item.filename = _mapAd[id].filename();
 						if (_pPlayer)
 							_pPlayer->_playList.push_back(item);
@@ -492,7 +513,10 @@ void AdManager::AdManagerImpl::bgnBusiness()
 		LOG_DEBUG(_logger) << "启动广告客户端";
 		HRESULT hr = CPlayer::CreateInstance(NULL, NULL, &_pPlayer);
 		if (FAILED(hr))
+		{
 			LOG_ERROR(_logger) << "CPlayer::CreateInstance 失败";
+			_pPlayer = NULL;
+		}
 	}
 
 	_iosBiz.post(
