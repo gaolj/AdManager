@@ -126,20 +126,6 @@ HRESULT CPlayer::Initialize()
 		return -1;
 	}
 
-	HRESULT hr = lpfMFStartup(MF_VERSION, MFSTARTUP_FULL);	// MFSTARTUP_FULL	MFSTARTUP_NOSOCKET
-	if (FAILED(hr))
-	{
-		LOG_ERROR(logger) << std::showbase << std::uppercase << std::hex << "MFStartup:" << hr << std::noshowbase << std::nouppercase << std::dec; \
-		return hr;
-	}
-
-	m_hCloseEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-	if (m_hCloseEvent == NULL)
-	{
-		LOG_ERROR(logger) << "CreateEvent:" << GetLastError();
-		return HRESULT_FROM_WIN32(GetLastError());
-	}
-
 	return S_OK;
 }
 
@@ -938,11 +924,27 @@ void CPlayer::NotifyPlay()
 static boost::atomic_bool ready(false);
 void CPlayer::SetVideoWindow(HWND hVideo)
 {
+	BOOST_LOG_FUNCTION();
 	m_hwndVideo = hVideo;
 	m_hwndEvent = hVideo;
 
-	HRESULT hr = CreateSession();
+	HRESULT hr = lpfMFStartup(MF_VERSION, MFSTARTUP_FULL);	// MFSTARTUP_FULL	MFSTARTUP_NOSOCKET
+	if (FAILED(hr))
+	{
+		LOG_ERROR(logger) << std::showbase << std::uppercase << std::hex << "MFStartup:" << hr << std::noshowbase << std::nouppercase << std::dec; \
+		return;
+	}
+
+	m_hCloseEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (m_hCloseEvent == NULL)
+	{
+		LOG_ERROR(logger) << "CreateEvent:" << GetLastError();
+		return;
+	}
+
+	CreateSession();
 	for (int i = 0; i < 30; i++)
+	{
 		if (ready)
 		{
 			NotifyPlay();
@@ -952,6 +954,7 @@ void CPlayer::SetVideoWindow(HWND hVideo)
 		{
 			::Sleep(100);
 		}
+	}
 }
 
 void CPlayer::SetMediaSourceReady(bool isReady)
