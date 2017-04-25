@@ -1,0 +1,12 @@
+// version 1.24
+// protoc.exe --cpp_out=./  Message.proto
+
+syntax = "proto3";
+
+message Message {
+	int64 id = 1;			// 调用序列号
+	string method = 2;		// 接口名称
+	bytes content = 3;		// 接口参数或返回值
+	int32 returnCode = 4;	// 返回状态码，0-成功，其它数字为失败
+	string returnMsg = 5;	// 具体错误信息
+}

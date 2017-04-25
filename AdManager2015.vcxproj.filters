@@ -25,13 +25,16 @@
     <None Include="md5.hh">
       <Filter>头文件</Filter>
     </None>
-    <None Include="AdPlayPolicy.proto">
-      <Filter>Proto</Filter>
-    </None>
-    <None Include="protoc.exe">
-      <Filter>Proto</Filter>
-    </None>
     <None Include="Message.proto" />
+    <None Include="ad\Message.proto">
+      <Filter>Proto</Filter>
+    </None>
+    <None Include="ad\AdPlayPolicy.proto">
+      <Filter>Proto</Filter>
+    </None>
+    <None Include="ad\protoc.exe">
+      <Filter>Proto</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AdManager.cpp">

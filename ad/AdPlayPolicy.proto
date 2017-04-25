@@ -1,5 +1,7 @@
-syntax = "proto3";
 // version 1.25
+// protoc.exe --cpp_out=./  AdPlayPolicy.proto
+
+syntax = "proto3";
 
 option java_package = "com.oddmu.advertcenter.model.proto";
 option java_outer_classname = "CommunicationMsgProtos";
@@ -61,5 +63,3 @@ message AdPlayPolicy {
 		}
 	}	
 }
-
-// protoc.exe --cpp_out=./ad  AdPlayPolicy.proto
