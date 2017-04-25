@@ -22,7 +22,7 @@ public:
 	void setConfig(					// 设置参数
 		const std::string& peerAddr	// 对方地址（广告中心地址或网吧服务端地址）
 		, int peerPort				// 对方端口
-		, int barId = 0				// 网吧ID
+		, std::string barId = 0		// 网吧ID
 		, bool isBarServer = false	// 是否是网吧服务端
 		, int listenPort = 0		// 网吧服务端的监听端口
 		, std::string logLvl = "info");	// 日志级别

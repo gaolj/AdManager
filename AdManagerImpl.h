@@ -23,7 +23,7 @@ public:
 	void setConfig(					// 设置参数
 		const std::string& peerAddr	// 对方地址（广告中心地址或网吧服务端地址）
 		, int peerPort				// 对方端口
-		, int barId					// 网吧ID
+		, std::string barId			// 网吧ID
 		, bool isBarServer			// 是否是网吧服务端
 		, int listenPort			// 网吧服务端的监听端口
 		, const std::string& logLvl);// 日志级别
@@ -45,7 +45,7 @@ public:
 public:
 	CPlayer *_pPlayer;
 	HWND _hwnd;
-	int _barId;
+	std::string _barId;
 	int _listenPort;
 	bool _isBarServer;
 	boost::asio::ip::tcp::endpoint _endpoint;

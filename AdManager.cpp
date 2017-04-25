@@ -202,12 +202,21 @@ void AdManager::AdManagerImpl::requestAdPlayPolicy()
 	if (_isEndBusiness)
 		return;
 
-	Message msgReq;
-	msgReq.set_method("getAdPlayPolicy");
-
-	int id = htonl(_barId);
+	int id = 0;
+	try
+	{
+		id = boost::lexical_cast<int>(_barId);
+	}
+	catch (boost::bad_lexical_cast& /*e*/)
+	{
+		LOG_DEBUG(_logger) << "boost::lexical_cast<int>(_barId)" << _barId;
+	}
+	id = htonl(id);
 	char bufId[4] = {};
 	memcpy(bufId, &id, 4);
+
+	Message msgReq;
+	msgReq.set_method("getAdPlayPolicy");
 	msgReq.set_content(bufId, 4);
 
 	auto fut = _tcpClient->session()->request(msgReq);
@@ -450,7 +459,7 @@ void AdManager::AdManagerImpl::downloadAds()
 		}
 }
 
-void AdManager::setConfig(const std::string& peerAddr, int peerPort, int barId, bool isBarServer, int listenPort, std::string logLvl)
+void AdManager::setConfig(const std::string& peerAddr, int peerPort, std::string barId, bool isBarServer, int listenPort, std::string logLvl)
 {
 	_pimpl->setConfig(peerAddr, peerPort, barId, isBarServer, listenPort, logLvl);
 }
@@ -469,7 +478,7 @@ void AdManager::closeVideoWnd()
 		_pimpl->_pPlayer->Shutdown();
 }
 
-void AdManager::AdManagerImpl::setConfig(const std::string& peerAddr, int peerPort, int barId, bool isBarServer, int listenPort, const std::string& logLvl)
+void AdManager::AdManagerImpl::setConfig(const std::string& peerAddr, int peerPort, std::string barId, bool isBarServer, int listenPort, const std::string& logLvl)
 {
 	using namespace boost::asio::ip;
 	_endpoint = tcp::endpoint(address::from_string(peerAddr), peerPort);
