@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2011 rel. 2 (http://www.altova.com) by TeaM DJiNN (TeaM DJiNN) -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:element name="AdPlayPolicy">
+		<xs:annotation>
+			<xs:documentation>广告播放策略</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="id" type="xs:int">
+					<xs:annotation>
+						<xs:documentation>策略id</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="version" type="xs:string">
+					<xs:annotation>
+						<xs:documentation>策略版本</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="dateTime" type="xs:string">
+					<xs:annotation>
+						<xs:documentation>策略发布日期</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="adPlay" type="AdPlay"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="Ad">
+		<xs:annotation>
+			<xs:documentation>广告v1.2</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="id" type="xs:int">
+					<xs:annotation>
+						<xs:documentation>广告ID</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="name" type="xs:string">
+					<xs:annotation>
+						<xs:documentation>广告名称</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="advertiser" type="xs:string">
+					<xs:annotation>
+						<xs:documentation>广告商名称</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="type">
+					<xs:annotation>
+						<xs:documentation>类型：视频-1，本地Web页面-2，超链接-3，图片-4，图标-5</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="url">
+					<xs:annotation>
+						<xs:documentation>超链接广告的url</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="image">
+					<xs:annotation>
+						<xs:documentation>图片，图标的二进制数据</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="width">
+					<xs:annotation>
+						<xs:documentation>广告画面最佳宽度</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="height">
+					<xs:annotation>
+						<xs:documentation>广告画面最佳高度</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="format" type="xs:string">
+					<xs:annotation>
+						<xs:documentation>格式: swf, wmv</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="size" type="xs:int">
+					<xs:annotation>
+						<xs:documentation>文件字节数</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="md5" type="xs:string">
+					<xs:annotation>
+						<xs:documentation>文件校验md5</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="duration" type="xs:int">
+					<xs:annotation>
+						<xs:documentation>播放时间长度（秒）</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="download">
+					<xs:annotation>
+						<xs:documentation>下载路径</xs:documentation>
+					</xs:annotation>
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="url" type="xs:string" maxOccurs="unbounded"/>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="minAge" type="xs:int" default="0" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>适合最小年龄</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="maxAge" type="xs:int" default="100" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>适合最大年龄</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="sex" type="xs:int" default="0" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>适合性别：男女-0，男-1，女-2</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+				<xs:element name="visitStat" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>第三方访问统计代码</xs:documentation>
+					</xs:annotation>
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="code" type="xs:string" maxOccurs="unbounded"/>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="click" minOccurs="0">
+					<xs:annotation>
+						<xs:documentation>点击后事件</xs:documentation>
+					</xs:annotation>
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="unlockPop" minOccurs="0">
+								<xs:annotation>
+									<xs:documentation>解锁后Pop广告</xs:documentation>
+								</xs:annotation>
+								<xs:complexType>
+									<xs:sequence>
+										<xs:element name="id" minOccurs="0" maxOccurs="unbounded">
+											<xs:annotation>
+												<xs:documentation>广告ID</xs:documentation>
+											</xs:annotation>
+										</xs:element>
+									</xs:sequence>
+								</xs:complexType>
+							</xs:element>
+							<xs:element name="pausePop" minOccurs="0">
+								<xs:annotation>
+									<xs:documentation>视频暂停Pop广告</xs:documentation>
+								</xs:annotation>
+								<xs:complexType>
+									<xs:sequence>
+										<xs:element name="id" minOccurs="0" maxOccurs="unbounded"/>
+									</xs:sequence>
+								</xs:complexType>
+							</xs:element>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="AdPlay">
+		<xs:annotation>
+			<xs:documentation>广告播放</xs:documentation>
+		</xs:annotation>
+		<xs:sequence minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="location" type="xs:int">
+				<xs:annotation>
+					<xs:documentation>广告位：锁屏-1，pop-2，退弹-3</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="mode" type="xs:int" default="1">
+				<xs:annotation>
+					<xs:documentation>播放模式：按顺序轮播-1，随机播放-2</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="needSync" type="xs:boolean" default="false">
+				<xs:annotation>
+					<xs:documentation>是否需要同步播放</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="timeList">
+				<xs:annotation>
+					<xs:documentation>播放时间列表</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="time" maxOccurs="unbounded">
+							<xs:complexType>
+								<xs:sequence>
+									<xs:element name="bgnTime" type="xs:string">
+										<xs:annotation>
+											<xs:documentation>开始播放时间</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+									<xs:element name="endTime" type="xs:string">
+										<xs:annotation>
+											<xs:documentation>结束播放时间</xs:documentation>
+										</xs:annotation>
+									</xs:element>
+								</xs:sequence>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="adList">
+				<xs:annotation>
+					<xs:documentation>广告列表</xs:documentation>
+				</xs:annotation>
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="id" type="xs:int" maxOccurs="unbounded">
+							<xs:annotation>
+								<xs:documentation>广告id</xs:documentation>
+							</xs:annotation>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>
